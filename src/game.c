@@ -43,6 +43,16 @@ void TransformAllDots(struct App *app)
 
 /*---------------------------------------------------------------------------*/
 
+static inline void InverseTransformDot(struct App *app, struct GameDot *gd)
+{
+	WORD fieldw = app->Field.MaxX - app->Field.MinX + 1;
+	WORD fieldh = app->Field.MaxY - app->Field.MinY + 1;
+	gd->Virtual.x = div16((gd->Pixel.x - app->Field.MinX) << 15, fieldw);
+	gd->Virtual.y = div16((gd->Pixel.y - app->Field.MinY) << 15, fieldh);
+}
+
+/*---------------------------------------------------------------------------*/
+
 void DrawLines(struct RastPort *rp, struct MinList *lines)
 {
 	struct GameLine *gl;
@@ -279,7 +289,7 @@ void GameUnclick(struct App *app, WORD x, WORD y)
 	app->Win->Flags &= ~WFLG_REPORTMOUSE;
 	DrawDraggedItems(app);
 	UpdateDragPosition(app, x, y);
-//	InverseTransformDot(app->DraggedDot);
+	InverseTransformDot(app, app->DraggedDot);
 	MoveDraggedItemsBack(app);
 	DrawGame(app);
 }
