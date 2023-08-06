@@ -191,6 +191,7 @@ ULONG Main(void)
 
 	app.LineStorage = NULL;
 	app.DotStorage = NULL;
+	DisposeGame(&app);
 	
 	if (errmsg = GetKickstartLibs(&app))
 	{
