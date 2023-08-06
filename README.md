@@ -21,6 +21,8 @@ vasm -Fbin level.s -o level.iff
 It implies that "vasm" assembler is also installed. This is a temporary solution, I plan to add feature of creation and saving levels in the game itself.
 ## Installation
 Executable may be copied anywhere. "level.iff" file should be in the same directory as executable. It runs from shell as well as from Workbench. For now there is no icon for it.
+## Usage
+After starting select "New" from menu (or `RAmiga + n` from keyboard) to load the test level.
 ## Requirements
 * Amiga with any processor (code is compiled for 68000).
 * Kickstart/Workbench 3.0 or higher.
