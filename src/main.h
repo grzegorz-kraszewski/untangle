@@ -13,6 +13,12 @@ WORD _a = (a), _b = (b); \
 asm("MULS.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
 _r;})
 
+#define div16(a,b) ({ \
+WORD _r, _b = (b); \
+LONG _a = (a); \
+asm("DIVS.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
+_r;})
+
 void InitList(struct MinList *list);
 
 extern struct Library
