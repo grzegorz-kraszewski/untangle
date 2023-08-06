@@ -268,7 +268,7 @@ void GameClick(struct App *app, WORD x, WORD y)
 
 /*---------------------------------------------------------------------------*/
 
-void UpdateDragPosition(struct App *app, WORD x, WORD y)
+static inline void UpdateDragPosition(struct App *app, WORD x, WORD y)
 {
 	if (x < app->Field.MinX) x = app->Field.MinX;
 	if (x > app->Field.MaxX) x = app->Field.MaxX;
@@ -282,7 +282,6 @@ void UpdateDragPosition(struct App *app, WORD x, WORD y)
 
 void GameUnclick(struct App *app, WORD x, WORD y)
 {
-	Printf("GameUnclick(%ld, %ld).\n", x, y);
 	app->Win->Flags &= ~WFLG_REPORTMOUSE;
 	DrawDraggedItems(app);
 	UpdateDragPosition(app, x, y);
