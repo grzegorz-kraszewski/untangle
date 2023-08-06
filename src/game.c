@@ -102,6 +102,7 @@ void EraseGame(struct App *app)
 {
 	struct RastPort *rp = app->Win->RPort;
 	SetAPen(rp, 0);
+	SetDrMd(rp, JAM1);
 	RectFill(rp, app->Win->BorderLeft, app->Win->BorderTop, app->Win->Width -
 	 app->Win->BorderRight - 1, app->Win->Height - app->Win->BorderBottom - 1);
 }
@@ -192,6 +193,34 @@ void MoveDraggedItems(struct App *app, struct GameDot *clicked)
 
 /*---------------------------------------------------------------------------*/
 
+static inline void MoveDraggedDotBack(struct App *app)
+{
+	AddTail((struct List*)&app->DotList, (struct Node*)app->DraggedDot);
+	app->DraggedDot = NULL;
+}
+
+/*---------------------------------------------------------------------------*/
+
+static inline void MoveDraggedLinesBack(struct App *app)
+{
+	struct GameLine *gl;
+
+	while (gl = (struct GameLine*)RemHead((struct List*)&app->DraggedLines))
+	{
+		AddTail((struct List*)&app->LineList, (struct Node*)gl);
+	}
+}
+
+/*---------------------------------------------------------------------------*/
+
+void MoveDraggedItemsBack(struct App *app)
+{
+	MoveDraggedDotBack(app);
+	MoveDraggedLinesBack(app);
+}
+
+/*---------------------------------------------------------------------------*/
+
 void EraseDot(struct App *app, struct GameDot *gd)
 {
 	BltTemplate(app->DotRaster, 0, 2, app->Win->RPort, gd->Pixel.x - DOT_RADIUS,
@@ -237,45 +266,48 @@ void GameClick(struct App *app, WORD x, WORD y)
 	}
 }
 
-
 /*---------------------------------------------------------------------------*/
-/* Game LMB up handler. Mouse movement reporting is turned off.              */
+
+void UpdateDragPosition(struct App *app, WORD x, WORD y)
+{
+	if (x < app->Field.MinX) x = app->Field.MinX;
+	if (x > app->Field.MaxX) x = app->Field.MaxX;
+	if (y < app->Field.MinY) y = app->Field.MinY;
+	if (y > app->Field.MaxY) y = app->Field.MaxY;
+	app->DraggedDot->Pixel.x = x;
+	app->DraggedDot->Pixel.y = y;
+}
+
 /*---------------------------------------------------------------------------*/
 
 void GameUnclick(struct App *app, WORD x, WORD y)
 {
 	Printf("GameUnclick(%ld, %ld).\n", x, y);
 	app->Win->Flags &= ~WFLG_REPORTMOUSE;
+	DrawDraggedItems(app);
+	UpdateDragPosition(app, x, y);
+//	InverseTransformDot(app->DraggedDot);
+	MoveDraggedItemsBack(app);
+	DrawGame(app);
 }
 
-
-/*---------------------------------------------------------------------------*/
-/* After dot drag has been initiated, this function is called on every mouse */
-/* movement.                                                                 */
 /*---------------------------------------------------------------------------*/
 
 void GameDotDrag(struct App *app, WORD x, WORD y)
 {
-	Printf("GameDotDrag(%ld, %ld).\n", x, y);
+	DrawDraggedItems(app);
+	UpdateDragPosition(app, x, y);	
+	DrawDraggedItems(app);	
 }
 
-
-/*
-struct GameDot defdots[] = {{8192, 8192}, {24576, 8192}, {24576, 24576}, {8192, 24576}};
-struct GameLine deflines[] = {{0, 3}, {0, 2}, {1, 3}, {1, 2}};
-*/
-
-
+/*---------------------------------------------------------------------------*/
 
 void NewGame(struct App *app)
 {
-	struct GameDot *gd;
-	struct GameLine *gl;
-	
 	LoadLevel();
-	Printf("DotStorage = $%08lx, LineStorage = $%08lx.\n", (LONG)app->DotStorage, (LONG)app->LineStorage);
 }
 
+/*---------------------------------------------------------------------------*/
 
 void DisposeGame(struct App *app)
 {

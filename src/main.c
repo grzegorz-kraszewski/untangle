@@ -65,7 +65,10 @@ ULONG TheLoop(struct App *app)
 					break;
 					
 					case IDCMP_MOUSEMOVE:
-						GameDotDrag(app, imsg->MouseX, imsg->MouseY);
+						if (app->Win->Flags & WFLG_REPORTMOUSE)
+						{
+							GameDotDrag(app, imsg->MouseX, imsg->MouseY);
+						}
 					break;
 				}
 				
