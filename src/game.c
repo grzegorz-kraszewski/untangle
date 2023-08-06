@@ -28,22 +28,16 @@
 /* Level completion test is done on virtual coordinates.                     */
 /*---------------------------------------------------------------------------*/
 
-
-static inline void TransformDot(struct GameDot *dot, const struct Rectangle *field)
-{
-	dot->Pixel.x = (mul16(dot->Virtual.x, (field->MaxX - field->MinX + 1)) >> 15) + field->MinX;
-	dot->Pixel.y = (mul16(dot->Virtual.y, (field->MaxY - field->MinY + 1)) >> 15) + field->MinY;
-}
-
-/*---------------------------------------------------------------------------*/
-
 void TransformAllDots(struct App *app)
 {
 	struct GameDot *gd;
+	WORD fieldw = app->Field.MaxX - app->Field.MinX + 1;
+	WORD fieldh = app->Field.MaxY - app->Field.MinY + 1;
 
 	ForEachFwd(&app->DotList, struct GameDot, gd)
 	{
-		TransformDot(gd, &app->Field);
+		gd->Pixel.x = (mul16(gd->Virtual.x, fieldw) >> 15) + app->Field.MinX;
+		gd->Pixel.y = (mul16(gd->Virtual.y, fieldh) >> 15) + app->Field.MinY;
 	}
 }
 
