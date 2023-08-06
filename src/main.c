@@ -61,7 +61,13 @@ ULONG TheLoop(struct App *app)
 					
 					case IDCMP_MOUSEBUTTONS:
 						if (imsg->Code == SELECTDOWN) GameClick(app, imsg->MouseX, imsg->MouseY);
-						else if (imsg->Code == SELECTUP) GameUnclick(app, imsg->MouseX, imsg->MouseY);
+						else if (imsg->Code == SELECTUP)
+						{
+							if (app->Win->Flags & WFLG_REPORTMOUSE)
+							{
+						 		GameUnclick(app, imsg->MouseX, imsg->MouseY);
+						 	}
+						}
 					break;
 					
 					case IDCMP_MOUSEMOVE:
