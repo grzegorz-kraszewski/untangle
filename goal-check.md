@@ -7,7 +7,7 @@ Let's assume a level has 40 dots and on average 5 lines meet in each dot. It giv
 It is obvious that it makes no sense to check intersection of a line with itself. Also relation "A intersects B" is alternating, so it implies "B intersects A". We can skip the matrix diagonal
 and whole upper (or lower) triangle submatrix. 4 950 checks left.
 
-In the next step we should observe that the definition of intersection in our game differs from strict mathematic one. The latter says that two line segments intersect if they are at least one
+In the next step we should observe that the definition of intersection in our game differs from strict mathematic one. The latter says that two line segments intersect if they have at least one
 common point. So, by strict definition, segments meeting at a dot intersect. By the game definition – they don't. Unless they lay one on another. This check is faster, only 2 multiplications. How many times
 we can use this short path? On average 8 times for each line, but half of them is in the skipped triangle of the matrix, so 400 cases out of 4 950. Still not good.
 
