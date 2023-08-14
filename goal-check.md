@@ -18,5 +18,5 @@ ending at the dot are also moved. Then we need to recheck intersections **of mov
 
 In any case full data of intersections have to be stored. I have decided to keep only lower triangle of the square matrix. In theory one bit per intersection is enough, at a cost of more complicated access.
 On the other hand if a byte per intersection is used, our example level needs 4950 bytes. Not much even for plain Amiga 500. If a level has *n* lines, (*n*² - *n*) / 2 bytes have to be allocated. Therefore I decided
-to use a byte per intersection. In this area rows of the triangle are stored one by one, without any padding. Indexing the structure is easy. I assume that lines in the game level are indexed starting from 0. Then, to
-access information byte of intersection between line *a* and line *b* (where *a* < *b*), one accesses byte \[*b* · (*b* - 1) ÷ 2 + *a*\].
+to use a byte per intersection. In this area rows of the triangle are stored one by one, without any padding. Indexing the structure is easy. I assume that lines of given game level are indexed starting from 0. Then, to
+access information of intersection between line *a* and line *b* (where *a* < *b*), one accesses byte \[*b* · (*b* - 1) ÷ 2 + *a*\].
