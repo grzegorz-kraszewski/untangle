@@ -11,7 +11,7 @@ In the next step we should observe that the definition of intersection in our ga
 common point. So, by strict definition, segments meeting at a dot intersect. By the game definition – they don't. Unless they lay one on another. This check is faster, only 2 multiplications. How many times
 we can use this short path? On average 8 times for each line, but half of them is in the skipped triangle of the matrix, so 400 cases out of 4 950. Still not good.
 
-The best optimization comes from another dimension: the time. Assume that at given moment in the game we know exactly which line segments are intersected by which. Then users moves a dot, so all segments
+The best optimization comes from another dimension: the time. Assume that at given moment in the game we know exactly which line segments are intersected by which. Then user moves a dot, so all segments
 ending at the dot are also moved. Then we need to recheck intersections **of moved lines only** and update the matrix. In our example it will be on average 5 × 95 = 475 checks.
 
 ## Storage of intersection data
