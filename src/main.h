@@ -47,6 +47,7 @@ struct GameLine
 	struct MinNode Node;
 	struct GameDot *StartDot;
 	struct GameDot *EndDot;
+	WORD Index;
 };
 
 struct App

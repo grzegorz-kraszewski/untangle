@@ -33,6 +33,7 @@ BOOL LoadLines(struct App *app, struct IFFHandle *level, LONG count)
 			{
 				gl->StartDot = app->DotStorage + buf[0];
 				gl->EndDot = app->DotStorage + buf[1];
+				gl->Index = i;
 				AddTail((struct List*)&app->LineList, (struct Node*)gl);
 				gl++;
 			}
@@ -108,9 +109,8 @@ void OpenStructure(struct App *app, struct IFFHandle *level)
 			}
 		}
 
-		Printf("Zakoñczono parsowanie z b³êdem %ld.\n", error);
 		CloseIFF(level);
-	}	
+	}
 }
 
 /*---------------------------------------------------------------------------*/
@@ -125,7 +125,7 @@ void OpenFile(struct App *app, struct IFFHandle *level)
 		InitIFFasDOS(level);
 		OpenStructure(app, level);
 		Close(levfile);
-	}	
+	}
 }
 
 /*---------------------------------------------------------------------------*/
