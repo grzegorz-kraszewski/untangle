@@ -11,9 +11,6 @@
 #define MARGIN (DOT_SIZE / 2 + 1)
 #define DOT_RADIUS (DOT_SIZE / 2)
 
-#define ForEachFwd(l, t, v) for (v = (t*)(l)->mlh_Head; v->Node.mln_Succ; v = (t*)v->Node.mln_Succ)
-#define ForEachRev(l, t, v) for (v = (t*)(l)->mlh_TailPred; v->Node.mln_Pred; v = (t*)v->Node.mln_Pred)
-
 /*---------------------------------------------------------------------------*/
 /* Game levels are generated in virtual coordinate system: a square of 32768 */
 /* x 32768 units, zero in upper left corner. At start and after every window */
