@@ -25,27 +25,27 @@
 /* Level completion test is done on virtual coordinates.                     */
 /*---------------------------------------------------------------------------*/
 
-void TransformAllDots(struct App *app)
+static void TransformAllDots(struct MinList *dots, struct Rectangle *field)
 {
 	struct GameDot *gd;
-	WORD fieldw = app->Field.MaxX - app->Field.MinX + 1;
-	WORD fieldh = app->Field.MaxY - app->Field.MinY + 1;
+	WORD fieldw = field->MaxX - field->MinX + 1;
+	WORD fieldh = field->MaxY - field->MinY + 1;
 
-	ForEachFwd(&app->DotList, struct GameDot, gd)
+	ForEachFwd(dots, struct GameDot, gd)
 	{
-		gd->Pixel.x = (mul16(gd->Virtual.x, fieldw) >> 15) + app->Field.MinX;
-		gd->Pixel.y = (mul16(gd->Virtual.y, fieldh) >> 15) + app->Field.MinY;
+		gd->Pixel.x = (mul16(gd->Virtual.x, fieldw) >> 15) + field->MinX;
+		gd->Pixel.y = (mul16(gd->Virtual.y, fieldh) >> 15) + field->MinY;
 	}
 }
 
 /*---------------------------------------------------------------------------*/
 
-static inline void InverseTransformDot(struct App *app, struct GameDot *gd)
+static inline void InverseTransformDot(struct GameDot *gd, struct Rectangle *field)
 {
-	WORD fieldw = app->Field.MaxX - app->Field.MinX + 1;
-	WORD fieldh = app->Field.MaxY - app->Field.MinY + 1;
-	gd->Virtual.x = div16((gd->Pixel.x - app->Field.MinX) << 15, fieldw);
-	gd->Virtual.y = div16((gd->Pixel.y - app->Field.MinY) << 15, fieldh);
+	WORD fieldw = field->MaxX - field->MinX + 1;
+	WORD fieldh = field->MaxY - field->MinY + 1;
+	gd->Virtual.x = div16((gd->Pixel.x - field->MinX) << 15, fieldw);
+	gd->Virtual.y = div16((gd->Pixel.y - field->MinY) << 15, fieldh);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -68,7 +68,7 @@ void DrawDots(struct RastPort *rp, struct App *app)
 	WORD dotradius = DOT_SIZE >> 1;
 	struct GameDot *gd;
 	
-	ForEachFwd(&app->DotList, struct GameDot, gd)
+	ForEachFwd(&app->Level->DotList, struct GameDot, gd)
 	{
 		BltMaskBitMapRastPort(app->DotBitMap, 0, 0, rp, gd->Pixel.x - dotradius,
 			gd->Pixel.y - dotradius, DOT_SIZE, DOT_SIZE, 0xE0, (APTR)app->DotRaster);
@@ -82,7 +82,7 @@ void DrawGame(struct App *app)
 	struct RastPort *rp = app->Win->RPort;
 	SetAPen(rp, 1);
 	SetDrMd(rp, JAM1);
-	DrawLines(rp, &app->LineList);
+	DrawLines(rp, &app->Level->LineList);
 	DrawDots(rp, app);	
 }
 
@@ -94,7 +94,7 @@ void ScaleGame(struct App *app)
 	app->Field.MinY = app->Win->BorderTop + MARGIN;
 	app->Field.MaxX = app->Win->Width - app->Win->BorderRight - MARGIN - 1;
 	app->Field.MaxY = app->Win->Height - app->Win->BorderBottom - MARGIN - 1;
-	TransformAllDots(app);
+	TransformAllDots(&app->Level->DotList, &app->Field);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -146,7 +146,7 @@ struct GameDot* FindClickedDot(struct App *app, UWORD x, UWORD y)
 {
 	struct GameDot *gd;
 	
-	ForEachRev(&app->DotList, struct GameDot, gd)
+	ForEachRev(&app->Level->DotList, struct GameDot, gd)
 	{
 		if (DotClicked(app, gd, x, y)) return gd;
 	}
@@ -156,19 +156,19 @@ struct GameDot* FindClickedDot(struct App *app, UWORD x, UWORD y)
 
 /*---------------------------------------------------------------------------*/
 
-static inline void MoveDraggedDot(struct App *app, struct GameDot *clicked)
+static inline void MoveDraggedDot(struct GameLevel *glv, struct GameDot *clicked)
 {
 	Remove((struct Node*)clicked);
-	app->DraggedDot = clicked;
+	glv->DraggedDot = clicked;
 }
 
 /*---------------------------------------------------------------------------*/
 
-static inline void MoveDraggedLines(struct App *app, struct GameDot *clicked)
+static inline void MoveDraggedLines(struct GameLevel *glv, struct GameDot *clicked)
 {
 	struct GameLine *gl, *gl2;
 	
-	gl = (struct GameLine*)app->LineList.mlh_Head;
+	gl = (struct GameLine*)glv->LineList.mlh_Head;
 	
 	while (gl->Node.mln_Succ)
 	{
@@ -177,7 +177,7 @@ static inline void MoveDraggedLines(struct App *app, struct GameDot *clicked)
 		if ((gl->StartDot == clicked) || (gl->EndDot == clicked))
 		{
 			Remove((struct Node*)gl);
-			AddTail((struct List*)&app->DraggedLines, (struct Node*)gl);
+			AddTail((struct List*)&glv->DraggedLines, (struct Node*)gl);
 		}
 
 		gl = gl2;	
@@ -186,45 +186,45 @@ static inline void MoveDraggedLines(struct App *app, struct GameDot *clicked)
 
 /*---------------------------------------------------------------------------*/
 
-void MoveDraggedItems(struct App *app, struct GameDot *clicked)
+void MoveDraggedItems(struct GameLevel *glv, struct GameDot *clicked)
 {
-	MoveDraggedDot(app, clicked);
-	MoveDraggedLines(app, clicked);
+	MoveDraggedDot(glv, clicked);
+	MoveDraggedLines(glv, clicked);
 }
 
 /*---------------------------------------------------------------------------*/
 
-static inline void MoveDraggedDotBack(struct App *app)
+static inline void MoveDraggedDotBack(struct GameLevel *glv)
 {
-	AddTail((struct List*)&app->DotList, (struct Node*)app->DraggedDot);
-	app->DraggedDot = NULL;
+	AddTail((struct List*)&glv->DotList, (struct Node*)glv->DraggedDot);
+	glv->DraggedDot = NULL;
 }
 
 /*---------------------------------------------------------------------------*/
 
-static inline void MoveDraggedLinesBack(struct App *app)
+static inline void MoveDraggedLinesBack(struct GameLevel *glv)
 {
 	struct GameLine *gl;
 
-	while (gl = (struct GameLine*)RemHead((struct List*)&app->DraggedLines))
+	while (gl = (struct GameLine*)RemHead((struct List*)&glv->DraggedLines))
 	{
-		AddTail((struct List*)&app->LineList, (struct Node*)gl);
+		AddTail((struct List*)&glv->LineList, (struct Node*)gl);
 	}
 }
 
 /*---------------------------------------------------------------------------*/
 
-void MoveDraggedItemsBack(struct App *app)
+void MoveDraggedItemsBack(struct GameLevel *glv)
 {
-	MoveDraggedDotBack(app);
-	MoveDraggedLinesBack(app);
+	MoveDraggedDotBack(glv);
+	MoveDraggedLinesBack(glv);
 }
 
 /*---------------------------------------------------------------------------*/
 
 void EraseDot(struct App *app, struct GameDot *gd)
 {
-	BltTemplate(app->DotRaster, 0, 2, app->Win->RPort, gd->Pixel.x - DOT_RADIUS,
+	BltTemplate((CONST PLANEPTR)app->DotRaster, 0, 2, app->Win->RPort, gd->Pixel.x - DOT_RADIUS,
 	 gd->Pixel.y - DOT_RADIUS, DOT_SIZE, DOT_SIZE);
 }
 
@@ -236,8 +236,8 @@ void DrawDraggedItems(struct App *app)
 	
 	SetDrMd(rp, JAM1 | COMPLEMENT);
 	SetAPen(rp, 1);
-	DrawLines(rp, &app->DraggedLines);
-	EraseDot(app, app->DraggedDot);
+	DrawLines(rp, &app->Level->DraggedLines);
+	EraseDot(app, app->Level->DraggedDot);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -247,8 +247,8 @@ void EraseDraggedItems(struct App *app)
 	struct RastPort *rp = app->Win->RPort;
 
 	SetAPen(rp, 0);
-	EraseDot(app, app->DraggedDot);
-	DrawLines(rp, &app->DraggedLines);
+	EraseDot(app, app->Level->DraggedDot);
+	DrawLines(rp, &app->Level->DraggedLines);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -257,26 +257,29 @@ void GameClick(struct App *app, WORD x, WORD y)
 {
 	struct GameDot *clicked;
 
-	if (clicked = FindClickedDot(app, x, y))
-	{ 	
-		MoveDraggedItems(app, clicked);
-		EraseDraggedItems(app);
-		DrawGame(app);
-		DrawDraggedItems(app);
-		app->Win->Flags |= WFLG_REPORTMOUSE;
+	if (app->Level)
+	{
+		if (clicked = FindClickedDot(app, x, y))
+		{ 	
+			MoveDraggedItems(app->Level, clicked);
+			EraseDraggedItems(app);
+			DrawGame(app);
+			DrawDraggedItems(app);
+			app->Win->Flags |= WFLG_REPORTMOUSE;
+		}
 	}
 }
 
 /*---------------------------------------------------------------------------*/
 
-static inline void UpdateDragPosition(struct App *app, WORD x, WORD y)
+static inline void UpdateDragPosition(struct GameDot *gd, struct Rectangle *field, WORD x, WORD y)
 {
-	if (x < app->Field.MinX) x = app->Field.MinX;
-	if (x > app->Field.MaxX) x = app->Field.MaxX;
-	if (y < app->Field.MinY) y = app->Field.MinY;
-	if (y > app->Field.MaxY) y = app->Field.MaxY;
-	app->DraggedDot->Pixel.x = x;
-	app->DraggedDot->Pixel.y = y;
+	if (x < field->MinX) x = field->MinX;
+	if (x > field->MaxX) x = field->MaxX;
+	if (y < field->MinY) y = field->MinY;
+	if (y > field->MaxY) y = field->MaxY;
+	gd->Pixel.x = x;
+	gd->Pixel.y = y;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -285,9 +288,9 @@ void GameUnclick(struct App *app, WORD x, WORD y)
 {
 	app->Win->Flags &= ~WFLG_REPORTMOUSE;
 	DrawDraggedItems(app);
-	UpdateDragPosition(app, x, y);
-	InverseTransformDot(app, app->DraggedDot);
-	MoveDraggedItemsBack(app);
+	UpdateDragPosition(app->Level->DraggedDot, &app->Field, x, y);
+	InverseTransformDot(app->Level->DraggedDot, &app->Field);
+	MoveDraggedItemsBack(app->Level);
 	DrawGame(app);
 }
 
@@ -296,7 +299,7 @@ void GameUnclick(struct App *app, WORD x, WORD y)
 void GameDotDrag(struct App *app, WORD x, WORD y)
 {
 	DrawDraggedItems(app);
-	UpdateDragPosition(app, x, y);	
+	UpdateDragPosition(app->Level->DraggedDot, &app->Field, x, y);	
 	DrawDraggedItems(app);	
 }
 
@@ -304,19 +307,13 @@ void GameDotDrag(struct App *app, WORD x, WORD y)
 
 void NewGame(struct App *app)
 {
-	LoadLevel();
+	app->Level = LoadLevel();
 }
 
 /*---------------------------------------------------------------------------*/
 
-void DisposeGame(struct App *app)
+void DisposeLevel(struct GameLevel *glv)
 {
-	if (app->LineStorage) FreeVec(app->LineStorage);
-	if (app->DotStorage) FreeVec(app->DotStorage);
-	app->LineStorage = NULL;
-	app->DotStorage = NULL;
-	InitList(&app->DotList);
-	InitList(&app->LineList);
-	InitList(&app->DraggedLines);
-	app->DraggedDot = NULL;
+	if (glv->LineStorage) FreeVec(glv->LineStorage);
+	if (glv->DotStorage) FreeVec(glv->DotStorage);
 }

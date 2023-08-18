@@ -50,19 +50,24 @@ struct GameLine
 	WORD Index;
 };
 
+struct GameLevel
+{
+	struct GameDot *DotStorage;
+	struct GameLine *LineStorage;
+	struct MinList DotList;
+	struct MinList LineList;
+	struct MinList DraggedLines;
+	struct GameDot *DraggedDot;
+};
+
 struct App
 {
 	struct Window *Win;
 	struct Menu *WinMenu;
 	UWORD *DotRaster;
 	struct BitMap *DotBitMap;
-	struct GameDot *DotStorage;
-	struct GameLine *LineStorage;
 	struct Rectangle Field;
-	struct MinList DotList;
-	struct MinList LineList;
-	struct MinList DraggedLines;
-	struct GameDot *DraggedDot;
+	struct GameLevel *Level;
 };
 
 #endif  /* UNTANGLE_MAIN_H */

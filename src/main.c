@@ -189,9 +189,7 @@ ULONG Main(void)
 	struct App app;
 	STRPTR errmsg;
 
-	app.LineStorage = NULL;
-	app.DotStorage = NULL;
-	DisposeGame(&app);
+	app.Level = NULL;
 	
 	if (errmsg = GetKickstartLibs(&app))
 	{
@@ -200,7 +198,6 @@ ULONG Main(void)
 		return RETURN_FAIL;
 	}
 
-	PutStr("Clean exit.\n");
 	return 0;
 }
 
