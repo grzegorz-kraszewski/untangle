@@ -2,7 +2,7 @@
 /* loader of levels */
 /*------------------*/
 
-#include "main.h"
+#include "loader.h"
 
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -13,6 +13,7 @@
 #define ID_DOTS MAKE_ID('D','O','T','S')
 #define ID_LINE MAKE_ID('L','I','N','E')
 
+#if 0
 /*---------------------------------------------------------------------------*/
 
 BOOL LoadLines(struct App *app, struct IFFHandle *level, LONG count)
@@ -78,9 +79,11 @@ BOOL LoadDots(struct App *app, struct IFFHandle *level, LONG count)
 
 /*---------------------------------------------------------------------------*/
 
-void OpenStructure(struct App *app, struct IFFHandle *level)
+#endif
+
+LONG OpenStructure(struct GameLevel *gl, struct IFFHandle *handle)
 {
-	if (OpenIFF(level, IFFF_READ) == 0)
+	if (OpenIFF(handle, IFFF_READ) == 0)
 	{
 		BOOL have_lines = FALSE;
 		BOOL have_dots = FALSE;
@@ -88,56 +91,98 @@ void OpenStructure(struct App *app, struct IFFHandle *level)
 		LONG error = 0;
 		UBYTE strid[5];
 		
-		StopChunk(level, ID_UNTG, ID_DOTS);
-		StopChunk(level, ID_UNTG, ID_LINE);
+		StopChunk(handle, ID_UNTG, ID_DOTS);
+		StopChunk(handle, ID_UNTG, ID_LINE);
 		
 		for (;;)
 		{
-			error = ParseIFF(level, IFFPARSE_SCAN);
+			error = ParseIFF(handle, IFFPARSE_SCAN);
 			if (error) break;
-			curch = CurrentChunk(level);
+			curch = CurrentChunk(handle);
 			
 			switch(curch->cn_ID)
 			{
 				case ID_DOTS:
-					have_dots = LoadDots(app, level, curch->cn_Size / 4);
+					//have_dots = LoadDots(app, level, curch->cn_Size / 4);
 				break;
 				
 				case ID_LINE:
-					if (have_dots) have_lines = LoadLines(app, level, curch->cn_Size / 2);
+					//if (have_dots) have_lines = LoadLines(app, level, curch->cn_Size / 2);
 				break;
 			}
 		}
 
-		CloseIFF(level);
+		CloseIFF(handle);
 	}
 }
 
 /*---------------------------------------------------------------------------*/
 
-void OpenFile(struct App *app, struct IFFHandle *level)
+static LONG OpenFile(struct GameLevel *gl, struct IFFHandle *handle)
 {
+	LONG err;
 	BPTR levfile;
 
 	if (levfile = Open("PROGDIR:level.iff", MODE_OLDFILE))
 	{
-		level->iff_Stream = levfile;
-		InitIFFasDOS(level);
-		OpenStructure(app, level);
+		handle->iff_Stream = levfile;
+		InitIFFasDOS(handle);
+		//err = OpenStructure(gl, handle);
+		err = LERR_FILE_OPEN_FAILED;
 		Close(levfile);
 	}
+	else err = LERR_FILE_OPEN_FAILED;
+	
+	return err;
 }
 
 /*---------------------------------------------------------------------------*/
 
-void LoadLevel(struct App *app)
+static LONG LoadLevel2(struct GameLevel *gl)
 {
-	struct IFFHandle *level;
+	struct IFFHandle *handle;
+	LONG err;
 
-	if (level = AllocIFF())
+	if (handle = AllocIFF())
 	{
-		OpenFile(app, level);
-		FreeIFF(level);
-	} 	
+		err = OpenFile(gl, handle);
+		FreeIFF(handle);
+	}
+	else err = LERR_OUT_OF_MEMORY;
+	
+	return err; 	
+}
+ 
+/*---------------------------------------------------------------------------*/
+
+static STRPTR LoadErrorMessages[] = {
+};
+
+static void ReportLoadError(LONG err)
+{
+}
+
+/*---------------------------------------------------------------------------*/
+
+struct GameLevel* LoadLevel()
+{
+	struct GameLevel *gl;
+	
+	if (gl = (struct GameLevel*)AllocMem(sizeof(struct GameLevel), MEMF_ANY))
+	{
+		LONG err;
+		
+		err = LoadLevel2(gl);
+		
+		if (err)
+		{
+			ReportLoadError(err);
+			FreeMem(gl, sizeof(struct GameLevel));
+			gl = NULL;
+		}
+	}
+	else ReportLoadError(LERR_OUT_OF_MEMORY);
+	
+	return gl;
 }
 

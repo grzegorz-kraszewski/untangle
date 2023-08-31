@@ -307,7 +307,8 @@ void GameDotDrag(struct App *app, WORD x, WORD y)
 
 void NewGame(struct App *app)
 {
-	app->Level = LoadLevel();
+	//app->Level = LoadLevel();
+	LoadLevel();
 }
 
 /*---------------------------------------------------------------------------*/

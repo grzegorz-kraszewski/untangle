@@ -25,7 +25,7 @@ static BOOL Action(struct App *app, ULONG action)
 	{
 		case ACTION_NEW:
 			EraseGame(app);
-			DisposeGame(app);
+			// DisposeGame(app);
 			NewGame(app);
 			ScaleGame(app);
 			DrawGame(app);
@@ -74,7 +74,7 @@ void SetupMenus(struct App *app)
 				if (SetMenuStrip(app->Win, app->WinMenu))
 				{
 					TheLoop(app);	
-					DisposeGame(app);
+					// DisposeGame(app);
 					ClearMenuStrip(app->Win);
 				}
 			}

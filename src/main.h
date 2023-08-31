@@ -35,6 +35,11 @@ extern struct Library
 
 #define DOT_SIZE 7
 
+#define SERR_SYSTEM_TOO_OLD             1
+#define SERR_NO_IFFPARSE                2
+#define SERR_NO_WINDOW                  3
+
+
 struct GameDot
 {
 	struct MinNode Node;

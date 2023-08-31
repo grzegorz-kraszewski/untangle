@@ -2,4 +2,13 @@
 /* prototypes for handling level files */
 /*-------------------------------------*/
 
-void LoadLevel(void);
+#include "main.h"
+
+struct GameLevel *LoadLevel(void);
+
+/*---------------------*/
+/* loading error codes */
+/*---------------------*/
+
+#define LERR_OUT_OF_MEMORY                   1
+#define LERR_FILE_OPEN_FAILED                2

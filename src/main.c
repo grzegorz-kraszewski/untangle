@@ -142,20 +142,23 @@ static STRPTR PrepareDotImage(struct App *app)
 }
 
 
-static STRPTR OpenMyWindow(struct App *app)
+static LONG OpenMyWindow(struct App *app)
 {
+	LONG err = SERR_NO_WINDOW;
+	 
 	if (app->Win = OpenWindowTagList(NULL, wintags))
 	{
-		PrepareDotImage(app);
+		//PrepareDotImage(app);
 		CloseWindow(app->Win);
 	}
-	else PutStr("Failed to open program window.\n");
+
+	return err;
 }
 
 
-STRPTR GetKickstartLibs(struct App *app)
+LONG GetKickstartLibs(struct App *app)
 {
-	STRPTR result = "Panic! Kickstart 3.x not found or corrupted.";
+	LONG result = SERR_SYSTEM_TOO_OLD;
 
 	if (GfxBase = OpenLibrary("graphics.library", 39))
 	{
@@ -165,6 +168,8 @@ STRPTR GetKickstartLibs(struct App *app)
 			{
 				if (GadToolsBase = OpenLibrary("gadtools.library", 39))
 				{
+					result = SERR_NO_IFFPARSE;
+
 					if (IFFParseBase = OpenLibrary("iffparse.library", 39))
 					{
 						result = OpenMyWindow(app);
@@ -183,21 +188,36 @@ STRPTR GetKickstartLibs(struct App *app)
 } 
 
 
+static STRPTR StartupErrorMessages[] = {
+	"Can't open iffparse.library v39+.\n",
+	"Can't open game window.\n"
+};
+
+
+static void ReportStartupError(err)
+{
+	/*-------------------------------------------------------------*/
+	/* In case of fail to open Kickstart libraries (error code 1), */
+	/* the best I can do is just a silent quit.                    */
+	/*-------------------------------------------------------------*/
+	 
+	if (err > 1) PutStr(StartupErrorMessages[err - 2]);
+	return;
+}
+
 
 ULONG Main(void)
 {
 	struct App app;
-	STRPTR errmsg;
+	LONG error;
 
 	app.Level = NULL;
 	
-	if (errmsg = GetKickstartLibs(&app))
+	if (error = GetKickstartLibs(&app))
 	{
-		PutStr(errmsg);
-		PutStr("\n\n");
+		ReportStartupError(error);
 		return RETURN_FAIL;
 	}
 
 	return 0;
 }
-
