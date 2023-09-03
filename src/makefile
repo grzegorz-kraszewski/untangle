@@ -23,8 +23,9 @@ start.o: start.c
 
 # dependencies
 
-game.o: game.c main.h
+game.o: game.c main.h loader.h
+loader.o: loader.c loader.h main.h
 main.o: main.c main.h menu.h
-menu.o: menu.c main.h
+menu.o: menu.c main.h game.h
 start.o: start.c
-loader.o: loader.c main.h
+
