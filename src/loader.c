@@ -20,7 +20,7 @@
 BOOL LoadLines(struct App *app, struct IFFHandle *level, LONG count)
 {
 	struct GameLine *gl;
-	
+
 	if (gl = AllocVec(sizeof(struct GameLine) * count, MEMF_ANY))
 	{
 		LONG i;
@@ -91,22 +91,22 @@ LONG OpenStructure(struct GameLevel *gl, struct IFFHandle *handle)
 		struct ContextNode *curch;
 		LONG error = 0;
 		UBYTE strid[5];
-		
+
 		StopChunk(handle, ID_UNTG, ID_DOTS);
 		StopChunk(handle, ID_UNTG, ID_LINE);
-		
+
 		for (;;)
 		{
 			error = ParseIFF(handle, IFFPARSE_SCAN);
 			if (error) break;
 			curch = CurrentChunk(handle);
-			
+
 			switch(curch->cn_ID)
 			{
 				case ID_DOTS:
 					//have_dots = LoadDots(app, level, curch->cn_Size / 4);
 				break;
-				
+
 				case ID_LINE:
 					//if (have_dots) have_lines = LoadLines(app, level, curch->cn_Size / 2);
 				break;
@@ -121,19 +121,19 @@ LONG OpenStructure(struct GameLevel *gl, struct IFFHandle *handle)
 
 static LONG OpenFile(struct GameLevel *gl, struct IFFHandle *handle)
 {
-	LONG err;
+	LONG err = LERR_FILE_OPEN_FAILED;
 	BPTR levfile;
+
+	SetIoErr(0);
 
 	if (levfile = Open("PROGDIR:level.iff", MODE_OLDFILE))
 	{
 		handle->iff_Stream = levfile;
 		InitIFFasDOS(handle);
 		//err = OpenStructure(gl, handle);
-		err = LERR_FILE_OPEN_FAILED;
 		Close(levfile);
 	}
-	else err = LERR_FILE_OPEN_FAILED;
-	
+
 	return err;
 }
 
@@ -150,18 +150,22 @@ static LONG LoadLevel2(struct GameLevel *gl)
 		FreeIFF(handle);
 	}
 	else err = LERR_OUT_OF_MEMORY;
-	
+
 	return err; 	
 }
  
 /*---------------------------------------------------------------------------*/
 
 static STRPTR LoadErrorMessages[] = {
-	"Out of memory."
+	"Out of memory.",
+	"Can't open file \"PROGDIR:level.iff\":\n%s."
 };
 
 static void ReportLoadError(struct Window *gwin, LONG err)
 {
+	STRPTR extrainfo = NULL;
+	UBYTE doserrbuf[88];
+
 	struct EasyStruct es = {
 		sizeof(struct EasyStruct),
 		0,
@@ -170,8 +174,14 @@ static void ReportLoadError(struct Window *gwin, LONG err)
 		"OK"
 	};
 
+	if (err == LERR_FILE_OPEN_FAILED)
+	{
+		Fault(IoErr(), "", doserrbuf, 88);
+		extrainfo = &doserrbuf[2];
+	}
+
 	es.es_TextFormat = LoadErrorMessages[err - 1];	
-	EasyRequest(gwin, &es, NULL, NULL);
+	EasyRequest(gwin, &es, NULL, (LONG)extrainfo);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -197,7 +207,7 @@ struct GameLevel* LoadLevel(struct Window *gwin)
 	{
 		gl->DotStorage = NULL;
 		gl->LineStorage = NULL;
-		//err = LoadLevel2(gl);
+		err = LoadLevel2(gl);
 	}
 
 	if (err)
