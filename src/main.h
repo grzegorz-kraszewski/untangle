@@ -68,6 +68,10 @@ struct GameLevel
 	struct MinList LineList;
 	struct MinList DraggedLines;
 	struct GameDot *DraggedDot;
+	UBYTE *Intersections;              /* triangle matrix of intersections between lines */
+	LONG DotCount;                     /* total number of dots */
+	LONG LineCount;                    /* total number of lines */
+	LONG InterCount;                   /* current number of intersections, 0 = level solved */
 };
 
 struct App
