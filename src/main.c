@@ -48,11 +48,11 @@ void TheLoop(struct App *app)
 					case IDCMP_CLOSEWINDOW:
 						running = FALSE;
 					break;
-					
+
 					case IDCMP_MENUPICK:
 						running = HandleMenu(app, imsg->Code);
 					break;
-					
+
 					case IDCMP_NEWSIZE:
 						EraseGame(app);
 						ScaleGame(app);

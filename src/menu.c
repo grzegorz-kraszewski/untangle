@@ -64,7 +64,7 @@ LONG SetupMenus(struct App *app)
 {
 	LONG err = SERR_MENU_LAYOUT;
 	APTR vi;
-	
+
 	if (vi = GetVisualInfo(app->Win->WScreen, TAG_END))
 	{
 		if (app->WinMenu = CreateMenus(AppMenu, TAG_END))
@@ -81,12 +81,12 @@ LONG SetupMenus(struct App *app)
 					ClearMenuStrip(app->Win);
 				}
 			}
-			
+
 			FreeMenus(app->WinMenu);
 		}
-		
+
 		FreeVisualInfo(vi);
 	}
-	
+
 	return err;
 }
