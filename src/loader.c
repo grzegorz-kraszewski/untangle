@@ -14,107 +14,126 @@
 #define ID_DOTS MAKE_ID('D','O','T','S')
 #define ID_LINE MAKE_ID('L','I','N','E')
 
-#if 0
 /*---------------------------------------------------------------------------*/
 
-BOOL LoadLines(struct App *app, struct IFFHandle *level, LONG count)
+static BOOL LoadLines(struct GameLevel *gl, struct IFFHandle *level, LONG count)
 {
-	struct GameLine *gl;
+	struct GameLine *gli;
+	LONG err = 0;
 
-	if (gl = AllocVec(sizeof(struct GameLine) * count, MEMF_ANY))
+	if (gli = AllocVec(sizeof(struct GameLine) * count, MEMF_ANY))
 	{
 		LONG i;
 		
-		app->LineStorage = gl;
-		
+		gl->LineStorage = gli;
+
 		for (i = 0; i < count; i++)
 		{
 			UBYTE buf[2];
-			
-			if (ReadChunkRecords(level, buf, 2, 1) == 1)
+
+			if ((err = ReadChunkRecords(level, buf, 2, 1)) == 1)
 			{
-				gl->StartDot = app->DotStorage + buf[0];
-				gl->EndDot = app->DotStorage + buf[1];
-				gl->Index = i;
-				AddTail((struct List*)&app->LineList, (struct Node*)gl);
-				gl++;
+				gli->StartDot = gl->DotStorage + buf[0];
+				gli->EndDot = gl->DotStorage + buf[1];
+				gli->Index = i;
+				AddTail((struct List*)&gl->LineList, (struct Node*)gli);
+				gli++;
 			}
+			else break;
 		}
-		
-		return TRUE;
+
+		if (err == 1) err = 0;    /* read one chunk record in the last loop turn -> OK */
 	}
-	
-	return FALSE;
+	else err = LERR_OUT_OF_MEMORY;
+
+	return err;
 }
 
 /*---------------------------------------------------------------------------*/
 
-BOOL LoadDots(struct App *app, struct IFFHandle *level, LONG count)
+static LONG LoadDots(struct GameLevel *gl, struct IFFHandle *handle, LONG count)
 {
 	struct GameDot *gd;
+	LONG err = 0;
 
 	if (gd = AllocVec(sizeof(struct GameDot) * count, MEMF_ANY))
 	{
 		LONG i;
 
-		app->DotStorage = gd;
+		gl->DotStorage = gd;
 
 		for (i = 0; i < count; i++)
 		{
 			UBYTE buf[4];
 			
-			if (ReadChunkRecords(level, buf, 4, 1) == 1)
+			if ((err = ReadChunkRecords(handle, buf, 4, 1)) == 1)
 			{
 				gd->Virtual.x = *(WORD*)&buf[0];
 				gd->Virtual.y = *(WORD*)&buf[2];
-				AddTail((struct List*)&app->DotList, (struct Node*)gd);
+				AddTail((struct List*)&gl->DotList, (struct Node*)gd);
 				gd++;
 			}
+			else break;
 		}
-		
-		return TRUE;
+
+		if (err == 1) err = 0;    /* read one chunk record in the last loop turn -> OK */
 	}
-	
-	return FALSE;
+	else err = LERR_OUT_OF_MEMORY;
+
+	return err;
 }
 
 /*---------------------------------------------------------------------------*/
 
-#endif
-
-LONG OpenStructure(struct GameLevel *gl, struct IFFHandle *handle)
+static LONG OpenStructure(struct GameLevel *gl, struct IFFHandle *handle)
 {
-	if (OpenIFF(handle, IFFF_READ) == 0)
+	LONG err;
+
+	if ((err = OpenIFF(handle, IFFF_READ)) == 0)
 	{
 		BOOL have_lines = FALSE;
 		BOOL have_dots = FALSE;
 		struct ContextNode *curch;
-		LONG error = 0;
 		UBYTE strid[5];
 
 		StopChunk(handle, ID_UNTG, ID_DOTS);
 		StopChunk(handle, ID_UNTG, ID_LINE);
 
-		for (;;)
+		do
 		{
-			error = ParseIFF(handle, IFFPARSE_SCAN);
-			if (error) break;
-			curch = CurrentChunk(handle);
-
-			switch(curch->cn_ID)
+			if (!(err = ParseIFF(handle, IFFPARSE_SCAN)))
 			{
-				case ID_DOTS:
-					//have_dots = LoadDots(app, level, curch->cn_Size / 4);
-				break;
+				curch = CurrentChunk(handle);
 
-				case ID_LINE:
-					//if (have_dots) have_lines = LoadLines(app, level, curch->cn_Size / 2);
-				break;
+				switch (curch->cn_ID)
+				{
+					case ID_DOTS:
+						if (!(err = LoadDots(gl, handle, curch->cn_Size / 4))) have_dots = TRUE;
+					break;
+
+					case ID_LINE:
+						if (have_dots)
+						{
+							 if (!(err = LoadLines(gl, handle, curch->cn_Size / 2))) have_lines = TRUE;
+						}
+						else err = LERR_LINES_BEFORE_DOTS;
+					break;
+				}
 			}
+		}
+		while (!err);
+
+		if (err == IFFERR_EOF)  /* it means parsing has been finished with no errors */
+		{
+			err = 0;
+			if (!have_lines) err = LERR_MISSING_LINES;
+			if (!have_dots) err = LERR_MISSING_DOTS;
 		}
 
 		CloseIFF(handle);
 	}
+
+	return err;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -130,7 +149,7 @@ static LONG OpenFile(struct GameLevel *gl, struct IFFHandle *handle)
 	{
 		handle->iff_Stream = levfile;
 		InitIFFasDOS(handle);
-		//err = OpenStructure(gl, handle);
+		err = OpenStructure(gl, handle);
 		Close(levfile);
 	}
 
@@ -151,14 +170,17 @@ static LONG LoadLevel2(struct GameLevel *gl)
 	}
 	else err = LERR_OUT_OF_MEMORY;
 
-	return err; 	
+	return err;
 }
- 
+
 /*---------------------------------------------------------------------------*/
 
 static STRPTR LoadErrorMessages[] = {
 	"Out of memory.",
-	"Can't open file \"PROGDIR:level.iff\":\n%s."
+	"Can't open file \"PROGDIR:level.iff\":\n%s.",
+	"No 'DOTS' chunk found in level file.",
+	"No 'LINE' chunk found in level file.",
+	"'LINE' chunk encountered before 'DOTS' one."
 };
 
 static void ReportLoadError(struct Window *gwin, LONG err)
@@ -169,7 +191,7 @@ static void ReportLoadError(struct Window *gwin, LONG err)
 	struct EasyStruct es = {
 		sizeof(struct EasyStruct),
 		0,
-		NULL,
+		"Untangle Level Loader",
 		NULL,
 		"OK"
 	};
@@ -180,7 +202,17 @@ static void ReportLoadError(struct Window *gwin, LONG err)
 		extrainfo = &doserrbuf[2];
 	}
 
-	es.es_TextFormat = LoadErrorMessages[err - 1];	
+	/*-----------------*/
+	/* iffparse errors */
+	/*-----------------*/
+
+	if ((err < 0) && (err >= IFF_RETURN2CLIENT))
+	{
+		es.es_TextFormat = "IFF structure parsing error %ld.";
+		extrainfo = (STRPTR)err; 
+	}
+	else es.es_TextFormat = LoadErrorMessages[err - 1];	
+
 	EasyRequest(gwin, &es, NULL, (LONG)extrainfo);
 }
 
@@ -207,6 +239,10 @@ struct GameLevel* LoadLevel(struct Window *gwin)
 	{
 		gl->DotStorage = NULL;
 		gl->LineStorage = NULL;
+		InitList(&gl->DotList);
+		InitList(&gl->LineList);
+		InitList(&gl->DraggedLines);
+		gl->DraggedDot = NULL;
 		err = LoadLevel2(gl);
 	}
 

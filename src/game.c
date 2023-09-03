@@ -307,14 +307,5 @@ void GameDotDrag(struct App *app, WORD x, WORD y)
 
 void NewGame(struct App *app)
 {
-	//app->Level = LoadLevel();
-	LoadLevel(app->Win);
-}
-
-/*---------------------------------------------------------------------------*/
-
-void DisposeLevel(struct GameLevel *glv)
-{
-	if (glv->LineStorage) FreeVec(glv->LineStorage);
-	if (glv->DotStorage) FreeVec(glv->DotStorage);
+	app->Level = LoadLevel(app->Win);
 }
