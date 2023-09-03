@@ -25,7 +25,8 @@ static BOOL Action(struct App *app, ULONG action)
 	{
 		case ACTION_NEW:
 			EraseGame(app);
-			// DisposeGame(app);
+			UnloadLevel(app->Level);
+			app->Level = NULL;
 			NewGame(app);
 			ScaleGame(app);
 			DrawGame(app);
@@ -59,8 +60,9 @@ BOOL HandleMenu(struct App *app, UWORD menucode)
 
 
 
-void SetupMenus(struct App *app)
+LONG SetupMenus(struct App *app)
 {
+	LONG err = SERR_MENU_LAYOUT;
 	APTR vi;
 	
 	if (vi = GetVisualInfo(app->Win->WScreen, TAG_END))
@@ -73,8 +75,9 @@ void SetupMenus(struct App *app)
 			{
 				if (SetMenuStrip(app->Win, app->WinMenu))
 				{
-					TheLoop(app);	
-					// DisposeGame(app);
+					err = 0;
+					TheLoop(app);
+					UnloadLevel(app->Level);
 					ClearMenuStrip(app->Win);
 				}
 			}
@@ -84,4 +87,6 @@ void SetupMenus(struct App *app)
 		
 		FreeVisualInfo(vi);
 	}
+	
+	return err;
 }

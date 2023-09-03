@@ -35,10 +35,15 @@ extern struct Library
 
 #define DOT_SIZE 7
 
+/*---------------------*/
+/* startup error codes */
+/*---------------------*/
+
 #define SERR_SYSTEM_TOO_OLD             1
 #define SERR_NO_IFFPARSE                2
 #define SERR_NO_WINDOW                  3
-
+#define SERR_NO_CHIP_MEM                4
+#define SERR_MENU_LAYOUT                5
 
 struct GameDot
 {

@@ -186,3 +186,14 @@ struct GameLevel* LoadLevel()
 	return gl;
 }
 
+/*---------------------------------------------------------------------------*/
+
+void UnloadLevel(struct GameLevel *gl)
+{
+	if (gl)
+	{
+		if (gl->DotStorage) FreeVec(gl->DotStorage);
+		if (gl->LineStorage) FreeVec(gl->LineStorage);
+		FreeMem(gl, sizeof(struct GameLevel));
+	}
+}

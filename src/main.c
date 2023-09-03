@@ -25,7 +25,7 @@ void InitList(struct MinList *list)
 
 /*---------------------------------------------------------------------------*/
 
-ULONG TheLoop(struct App *app)
+void TheLoop(struct App *app)
 {
 	BOOL running = TRUE;
 	struct IntuiMessage *imsg;
@@ -82,8 +82,8 @@ ULONG TheLoop(struct App *app)
 			}
 		}
 	}
-
-	return 0;
+	
+	return;
 }
 
 
@@ -113,9 +113,9 @@ UWORD DotRaster[DOT_SIZE * 2] = {0x3800, 0x7C00, 0xFE00, 0xFE00, 0xFE00, 0x7C00,
 
 #define DOTRASTER_MODULO 2
 
-static STRPTR PrepareDotImage(struct App *app)
+static LONG PrepareDotImage(struct App *app)
 {
-	STRPTR result = "Out of chip memory.";
+	LONG err = SERR_NO_CHIP_MEM;
 	
 	if (app->DotRaster = AllocMem(sizeof(DotRaster), MEMF_CHIP))
 	{
@@ -132,13 +132,12 @@ static STRPTR PrepareDotImage(struct App *app)
 			BltTemplate((UBYTE*)DotRaster, 0, DOTRASTER_MODULO, &tmrp, 0, 0, DOT_SIZE, DOT_SIZE);
 			SetAPen(&tmrp, 2);
 			BltTemplate((UBYTE*)&DotRaster[DOT_SIZE], 0, DOTRASTER_MODULO, &tmrp, 0, 0, DOT_SIZE, DOT_SIZE);		 
-			SetupMenus(app);
+			err = SetupMenus(app);
 			FreeBitMap(app->DotBitMap);
 		}
 		FreeMem(app->DotRaster, sizeof(DotRaster));
-		result = NULL;
 	}
-	return result;
+	return err;
 }
 
 
@@ -148,7 +147,7 @@ static LONG OpenMyWindow(struct App *app)
 	 
 	if (app->Win = OpenWindowTagList(NULL, wintags))
 	{
-		//PrepareDotImage(app);
+		err = PrepareDotImage(app);
 		CloseWindow(app->Win);
 	}
 
@@ -190,7 +189,9 @@ LONG GetKickstartLibs(struct App *app)
 
 static STRPTR StartupErrorMessages[] = {
 	"Can't open iffparse.library v39+.\n",
-	"Can't open game window.\n"
+	"Can't open game window.\n",
+	"Out of chip memory.\n",
+	"Can't create program menu (out of memory?).\n"
 };
 
 
