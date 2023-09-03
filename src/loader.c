@@ -6,6 +6,7 @@
 
 #include <proto/exec.h>
 #include <proto/dos.h>
+#include <proto/intuition.h>
 #include <proto/iffparse.h>
 #include <exec/memory.h>
 
@@ -156,34 +157,21 @@ static LONG LoadLevel2(struct GameLevel *gl)
 /*---------------------------------------------------------------------------*/
 
 static STRPTR LoadErrorMessages[] = {
+	"Out of memory."
 };
 
-static void ReportLoadError(LONG err)
+static void ReportLoadError(struct Window *gwin, LONG err)
 {
-}
+	struct EasyStruct es = {
+		sizeof(struct EasyStruct),
+		0,
+		NULL,
+		NULL,
+		"OK"
+	};
 
-/*---------------------------------------------------------------------------*/
-
-struct GameLevel* LoadLevel()
-{
-	struct GameLevel *gl;
-	
-	if (gl = (struct GameLevel*)AllocMem(sizeof(struct GameLevel), MEMF_ANY))
-	{
-		LONG err;
-		
-		err = LoadLevel2(gl);
-		
-		if (err)
-		{
-			ReportLoadError(err);
-			FreeMem(gl, sizeof(struct GameLevel));
-			gl = NULL;
-		}
-	}
-	else ReportLoadError(LERR_OUT_OF_MEMORY);
-	
-	return gl;
+	es.es_TextFormat = LoadErrorMessages[err - 1];	
+	EasyRequest(gwin, &es, NULL, NULL);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -196,4 +184,28 @@ void UnloadLevel(struct GameLevel *gl)
 		if (gl->LineStorage) FreeVec(gl->LineStorage);
 		FreeMem(gl, sizeof(struct GameLevel));
 	}
+}
+
+/*---------------------------------------------------------------------------*/
+
+struct GameLevel* LoadLevel(struct Window *gwin)
+{
+	struct GameLevel *gl;
+	LONG err = LERR_OUT_OF_MEMORY;
+
+	if (gl = (struct GameLevel*)AllocMem(sizeof(struct GameLevel), MEMF_ANY))
+	{
+		gl->DotStorage = NULL;
+		gl->LineStorage = NULL;
+		//err = LoadLevel2(gl);
+	}
+
+	if (err)
+	{
+		ReportLoadError(gwin, err);
+		UnloadLevel(gl);
+		gl = NULL;
+	}
+
+	return gl;
 }

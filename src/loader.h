@@ -4,7 +4,7 @@
 
 #include "main.h"
 
-struct GameLevel *LoadLevel(void);
+struct GameLevel *LoadLevel(struct Window *gamewin);
 
 /*---------------------*/
 /* loading error codes */
