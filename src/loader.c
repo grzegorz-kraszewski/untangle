@@ -16,33 +16,77 @@
 
 /*---------------------------------------------------------------------------*/
 
-static BOOL LoadLines(struct GameLevel *gl, struct IFFHandle *level, LONG count)
+static LONG CheckLineDuplicate(struct GameLevel *glv, WORD sdotidx, WORD edotidx)
+{
+	struct GameDot *sdotptr = glv->DotStorage + sdotidx;
+	struct GameDot *edotptr = glv->DotStorage + edotidx;
+	struct GameLine *gl;
+
+	ForEachFwd(&glv->LineList, struct GameLine, gl)
+	{
+		if (((sdotptr == gl->StartDot) && (edotptr == gl->EndDot))
+			|| ((sdotptr == gl->EndDot) && (edotptr == gl->StartDot)))
+			return LERR_DUPLICATE_LINE;
+	}
+
+	return 0;
+}
+
+/*---------------------------------------------------------------------------*/
+
+static LONG VerifyLine(struct GameLevel *glv, WORD sdotidx, WORD edotidx)
+{
+	if ((sdotidx < glv->DotCount) && (edotidx < glv->DotCount))
+		return CheckLineDuplicate(glv, sdotidx, edotidx);
+	else return LERR_DOT_INDEX_OUT_OF_RANGE;
+}
+
+/*---------------------------------------------------------------------------*/
+/* Why limit of number of lines is not checked?                              */
+/* 1. Out of range dot indexes are detected, level is rejected if found.     */
+/* 2. Duplicated lines are detected, level is rejected if found.             */
+/* These two impose upper limit of lines: complete graph of given number of  */
+/* dots. As dots are limited to 256 including, lines are implicitly limited  */
+/* to 32640.                                                                 */
+/*---------------------------------------------------------------------------*/
+
+static LONG LoadLines(struct GameLevel *gl, struct IFFHandle *level, WORD count)
 {
 	struct GameLine *gli;
 	LONG err = 0;
 
+	gl->LineCount = count;
+
 	if (gli = AllocVec(sizeof(struct GameLine) * count, MEMF_ANY))
 	{
-		LONG i;
-		
-		gl->LineStorage = gli;
-
-		for (i = 0; i < count; i++)
+		if (gl->Intersections = AllocVec(mul16(count, count - 1) / 2, MEMF_ANY))
 		{
-			UBYTE buf[2];
+			LONG i;
 
-			if ((err = ReadChunkRecords(level, buf, 2, 1)) == 1)
+			gl->LineStorage = gli;
+
+			for (i = 0; i < count; i++)
 			{
-				gli->StartDot = gl->DotStorage + buf[0];
-				gli->EndDot = gl->DotStorage + buf[1];
-				gli->Index = i;
-				AddTail((struct List*)&gl->LineList, (struct Node*)gli);
-				gli++;
-			}
-			else break;
-		}
+				UBYTE buf[2];
 
-		if (err == 1) err = 0;    /* read one chunk record in the last loop turn -> OK */
+				if ((err = ReadChunkRecords(level, buf, 2, 1)) == 1)
+				{
+					if (!(err = VerifyLine(gl, buf[0], buf[1])))
+					{
+						gli->StartDot = gl->DotStorage + buf[0];
+						gli->EndDot = gl->DotStorage + buf[1];
+						gli->Index = i;
+						AddTail((struct List*)&gl->LineList, (struct Node*)gli);
+						gli++;
+					}
+					else break;
+				}
+				else break;
+			}
+
+			if (err == 1) err = 0;    /* read one chunk record in the last loop turn -> OK */
+		}
+		else err = LERR_OUT_OF_MEMORY;
 	}
 	else err = LERR_OUT_OF_MEMORY;
 
@@ -51,34 +95,49 @@ static BOOL LoadLines(struct GameLevel *gl, struct IFFHandle *level, LONG count)
 
 /*---------------------------------------------------------------------------*/
 
-static LONG LoadDots(struct GameLevel *gl, struct IFFHandle *handle, LONG count)
+static LONG LoadDots(struct GameLevel *gl, struct IFFHandle *handle, WORD count)
 {
 	struct GameDot *gd;
 	LONG err = 0;
 
-	if (gd = AllocVec(sizeof(struct GameDot) * count, MEMF_ANY))
+	if (count <= 256)
 	{
-		LONG i;
+		gl->DotCount = count;
 
-		gl->DotStorage = gd;
-
-		for (i = 0; i < count; i++)
+		if (gd = AllocVec(sizeof(struct GameDot) * count, MEMF_ANY))
 		{
-			UBYTE buf[4];
-			
-			if ((err = ReadChunkRecords(handle, buf, 4, 1)) == 1)
-			{
-				gd->Virtual.x = *(WORD*)&buf[0];
-				gd->Virtual.y = *(WORD*)&buf[2];
-				AddTail((struct List*)&gl->DotList, (struct Node*)gd);
-				gd++;
-			}
-			else break;
-		}
+			LONG i;
 
-		if (err == 1) err = 0;    /* read one chunk record in the last loop turn -> OK */
+			gl->DotStorage = gd;
+
+			for (i = 0; i < count; i++)
+			{
+				UBYTE buf[4];
+
+				if ((err = ReadChunkRecords(handle, buf, 4, 1)) == 1)
+				{
+					gd->Virtual.x = *(WORD*)&buf[0];
+					gd->Virtual.y = *(WORD*)&buf[2];
+
+					if ((gd->Virtual.x >= 0) && (gd->Virtual.y >= 0))
+					{
+						AddTail((struct List*)&gl->DotList, (struct Node*)gd);
+						gd++;
+					}
+					else
+					{
+						err = LERR_DOT_COORDINATE_NEGATIVE;
+						break;
+					}
+				}
+				else break;
+			}
+
+			if (err == 1) err = 0;    /* read one chunk record in the last loop turn -> OK */
+		}
+		else err = LERR_OUT_OF_MEMORY;
 	}
-	else err = LERR_OUT_OF_MEMORY;
+	else err = LERR_TOO_MANY_DOTS;
 
 	return err;
 }
@@ -180,7 +239,11 @@ static STRPTR LoadErrorMessages[] = {
 	"Can't open file \"PROGDIR:level.iff\":\n%s.",
 	"No 'DOTS' chunk found in level file.",
 	"No 'LINE' chunk found in level file.",
-	"'LINE' chunk encountered before 'DOTS' one."
+	"'LINE' chunk encountered before 'DOTS' one.",
+	"More than 256 dots defined in the file.",
+	"Negative dot coordinates are not allowed.",
+	"Index of non-existent dot in a line definition.",
+	"Duplicate line detected."
 };
 
 static void ReportLoadError(struct Window *gwin, LONG err)
@@ -224,6 +287,7 @@ void UnloadLevel(struct GameLevel *gl)
 	{
 		if (gl->DotStorage) FreeVec(gl->DotStorage);
 		if (gl->LineStorage) FreeVec(gl->LineStorage);
+		if (gl->Intersections) FreeVec(gl->Intersections);
 		FreeMem(gl, sizeof(struct GameLevel));
 	}
 }
@@ -243,6 +307,7 @@ struct GameLevel* LoadLevel(struct Window *gwin)
 		InitList(&gl->LineList);
 		InitList(&gl->DraggedLines);
 		gl->DraggedDot = NULL;
+		gl->Intersections = NULL;
 		err = LoadLevel2(gl);
 	}
 

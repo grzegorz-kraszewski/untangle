@@ -15,3 +15,7 @@ struct GameLevel *LoadLevel(struct Window *gamewin);
 #define LERR_MISSING_DOTS                    3
 #define LERR_MISSING_LINES                   4
 #define LERR_LINES_BEFORE_DOTS               5
+#define LERR_TOO_MANY_DOTS                   6
+#define LERR_DOT_COORDINATE_NEGATIVE         7
+#define LERR_DOT_INDEX_OUT_OF_RANGE          8
+#define LERR_DUPLICATE_LINE                  9
