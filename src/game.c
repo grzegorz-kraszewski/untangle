@@ -1,5 +1,6 @@
 #include "main.h"
 #include "loader.h"
+#include "lscm.h"
 
 #include <proto/exec.h>
 #include <proto/graphics.h>
@@ -53,7 +54,7 @@ static inline void InverseTransformDot(struct GameDot *gd, struct Rectangle *fie
 void DrawLines(struct RastPort *rp, struct MinList *lines)
 {
 	struct GameLine *gl;
-	
+
 	ForEachFwd(lines, struct GameLine, gl)
 	{
 		Move(rp, gl->StartDot->Pixel.x, gl->StartDot->Pixel.y);
@@ -67,7 +68,7 @@ void DrawDots(struct RastPort *rp, struct App *app)
 {
 	WORD dotradius = DOT_SIZE >> 1;
 	struct GameDot *gd;
-	
+
 	ForEachFwd(&app->Level->DotList, struct GameDot, gd)
 	{
 		BltMaskBitMapRastPort(app->DotBitMap, 0, 0, rp, gd->Pixel.x - dotradius,
@@ -105,7 +106,7 @@ void EraseGame(struct App *app)
 	SetAPen(rp, 0);
 	SetDrMd(rp, JAM1);
 	RectFill(rp, app->Win->BorderLeft, app->Win->BorderTop, app->Win->Width -
-	 app->Win->BorderRight - 1, app->Win->Height - app->Win->BorderBottom - 1);
+		app->Win->BorderRight - 1, app->Win->Height - app->Win->BorderBottom - 1);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -136,7 +137,7 @@ BOOL DotClicked(struct App *app, struct GameDot* dot, UWORD x, UWORD y)
 		UWORD bby = y + DOT_RADIUS - dot->Pixel.y;
 		if (MaskHit(bbx, bby, app->DotRaster)) return TRUE;
 	}
-	
+
 	return FALSE;
 }
 
@@ -145,12 +146,12 @@ BOOL DotClicked(struct App *app, struct GameDot* dot, UWORD x, UWORD y)
 struct GameDot* FindClickedDot(struct App *app, UWORD x, UWORD y)
 {
 	struct GameDot *gd;
-	
+
 	ForEachRev(&app->Level->DotList, struct GameDot, gd)
 	{
 		if (DotClicked(app, gd, x, y)) return gd;
 	}
-	
+
 	return NULL; 
 }
 
@@ -167,13 +168,13 @@ static inline void MoveDraggedDot(struct GameLevel *glv, struct GameDot *clicked
 static inline void MoveDraggedLines(struct GameLevel *glv, struct GameDot *clicked)
 {
 	struct GameLine *gl, *gl2;
-	
+
 	gl = (struct GameLine*)glv->LineList.mlh_Head;
-	
+
 	while (gl->Node.mln_Succ)
 	{
 		gl2 = (struct GameLine*)gl->Node.mln_Succ;
-		
+
 		if ((gl->StartDot == clicked) || (gl->EndDot == clicked))
 		{
 			Remove((struct Node*)gl);
@@ -225,7 +226,7 @@ void MoveDraggedItemsBack(struct GameLevel *glv)
 void EraseDot(struct App *app, struct GameDot *gd)
 {
 	BltTemplate((CONST PLANEPTR)app->DotRaster, 0, 2, app->Win->RPort, gd->Pixel.x - DOT_RADIUS,
-	 gd->Pixel.y - DOT_RADIUS, DOT_SIZE, DOT_SIZE);
+		gd->Pixel.y - DOT_RADIUS, DOT_SIZE, DOT_SIZE);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -233,7 +234,7 @@ void EraseDot(struct App *app, struct GameDot *gd)
 void DrawDraggedItems(struct App *app)
 {
 	struct RastPort *rp = app->Win->RPort;
-	
+
 	SetDrMd(rp, JAM1 | COMPLEMENT);
 	SetAPen(rp, 1);
 	DrawLines(rp, &app->Level->DraggedLines);
@@ -260,7 +261,7 @@ void GameClick(struct App *app, WORD x, WORD y)
 	if (app->Level)
 	{
 		if (clicked = FindClickedDot(app, x, y))
-		{ 	
+		{
 			MoveDraggedItems(app->Level, clicked);
 			EraseDraggedItems(app);
 			DrawGame(app);
@@ -290,6 +291,7 @@ void GameUnclick(struct App *app, WORD x, WORD y)
 	DrawDraggedItems(app);
 	UpdateDragPosition(app->Level->DraggedDot, &app->Field, x, y);
 	InverseTransformDot(app->Level->DraggedDot, &app->Field);
+	UpdateIntersections(app->Level);
 	MoveDraggedItemsBack(app->Level);
 	DrawGame(app);
 }
@@ -307,5 +309,10 @@ void GameDotDrag(struct App *app, WORD x, WORD y)
 
 void NewGame(struct App *app)
 {
-	app->Level = LoadLevel(app->Win);
+	if (app->Level = LoadLevel(app->Win))
+	{
+		PrecalculateLevel(app->Level);
+		ScaleGame(app);
+		DrawGame(app);
+	}
 }

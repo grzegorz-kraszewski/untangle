@@ -28,8 +28,6 @@ static BOOL Action(struct App *app, ULONG action)
 			UnloadLevel(app->Level);
 			app->Level = NULL;
 			NewGame(app);
-			ScaleGame(app);
-			DrawGame(app);
 		break;
 		
 		case ACTION_QUIT:

@@ -59,7 +59,7 @@ static LONG LoadLines(struct GameLevel *gl, struct IFFHandle *level, WORD count)
 
 	if (gli = AllocVec(sizeof(struct GameLine) * count, MEMF_ANY))
 	{
-		if (gl->Intersections = AllocVec(mul16(count, count - 1) / 2, MEMF_ANY))
+		if (gl->Intersections = AllocVec(mul16(count, count - 1) / 2, MEMF_ANY | MEMF_CLEAR))
 		{
 			LONG i;
 
