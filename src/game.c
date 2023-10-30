@@ -83,8 +83,12 @@ void DrawGame(struct App *app)
 	struct RastPort *rp = app->Win->RPort;
 	SetAPen(rp, 1);
 	SetDrMd(rp, JAM1);
-	DrawLines(rp, &app->Level->LineList);
-	DrawDots(rp, app);	
+
+	if (app->Level)
+	{
+		DrawLines(rp, &app->Level->LineList);
+		DrawDots(rp, app);
+	}
 }
 
 /*---------------------------------------------------------------------------*/
@@ -95,7 +99,7 @@ void ScaleGame(struct App *app)
 	app->Field.MinY = app->Win->BorderTop + MARGIN;
 	app->Field.MaxX = app->Win->Width - app->Win->BorderRight - MARGIN - 1;
 	app->Field.MaxY = app->Win->Height - app->Win->BorderBottom - MARGIN - 1;
-	TransformAllDots(&app->Level->DotList, &app->Field);
+	if (app->Level) TransformAllDots(&app->Level->DotList, &app->Field);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -106,7 +110,7 @@ void EraseGame(struct App *app)
 	SetAPen(rp, 0);
 	SetDrMd(rp, JAM1);
 	RectFill(rp, app->Win->BorderLeft, app->Win->BorderTop, app->Win->Width -
-		app->Win->BorderRight - 1, app->Win->Height - app->Win->BorderBottom - 1);
+	 app->Win->BorderRight - 1, app->Win->Height - app->Win->BorderBottom - 1);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -181,7 +185,7 @@ static inline void MoveDraggedLines(struct GameLevel *glv, struct GameDot *click
 			AddTail((struct List*)&glv->DraggedLines, (struct Node*)gl);
 		}
 
-		gl = gl2;	
+		gl = gl2;
 	}
 }
 
@@ -226,7 +230,7 @@ void MoveDraggedItemsBack(struct GameLevel *glv)
 void EraseDot(struct App *app, struct GameDot *gd)
 {
 	BltTemplate((CONST PLANEPTR)app->DotRaster, 0, 2, app->Win->RPort, gd->Pixel.x - DOT_RADIUS,
-		gd->Pixel.y - DOT_RADIUS, DOT_SIZE, DOT_SIZE);
+	 gd->Pixel.y - DOT_RADIUS, DOT_SIZE, DOT_SIZE);
 }
 
 /*---------------------------------------------------------------------------*/
