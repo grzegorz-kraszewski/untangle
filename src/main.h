@@ -7,6 +7,7 @@
 
 #define REG(arg, reg) arg __asm(reg)
 
+#ifdef __M68K__
 #define mul16(a,b) ({ \
 LONG _r; \
 WORD _a = (a), _b = (b); \
@@ -18,6 +19,10 @@ WORD _r, _b = (b); \
 LONG _a = (a); \
 asm("DIVS.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
 _r;})
+#else
+#define mul16(a,b) a*b
+#define div16(a,b) a/b
+#endif
 
 #define ForEachFwd(l, t, v) for (v = (t*)(l)->mlh_Head; v->Node.mln_Succ; v = (t*)v->Node.mln_Succ)
 #define ForEachRev(l, t, v) for (v = (t*)(l)->mlh_TailPred; v->Node.mln_Pred; v = (t*)v->Node.mln_Pred)
