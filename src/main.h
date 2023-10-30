@@ -7,7 +7,7 @@
 
 #define REG(arg, reg) arg __asm(reg)
 
-#ifdef __M68K__
+#ifdef __mc68000__
 #define mul16(a,b) ({ \
 LONG _r; \
 WORD _a = (a), _b = (b); \
