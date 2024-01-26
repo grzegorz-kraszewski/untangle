@@ -13,7 +13,7 @@ struct Library *DOSBase;
 
 extern ULONG Main(void);
 
-ULONG Start(void)
+__saveds ULONG Start(void)
 {
 	struct Process *myproc = NULL;
 	struct Message *wbmsg = NULL;

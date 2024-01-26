@@ -1,7 +1,7 @@
 CC = gcc
-LD = ld
-CFLAGS = -noixemul -nostdlib -O2 -fomit-frame-pointer -m68000 -mregparm=2 -D__NOLIBBASE__ -DUSE_INLINE_STDARG
-LDFLAGS = -noixemul -nostartfiles -nostdlib
+LD = gcc
+CFLAGS = -nostdlib -O2 -fbaserel -msmall-code -mregparm -D__NOLIBBASE__ -DUSE_INLINE_STDARG
+LDFLAGS = -s -fbaserel -nostartfiles -nostdlib
 LIBS = 
 OBJS = start.o main.o menu.o game.o loader.o lscm.o
 EXE = Untangle
