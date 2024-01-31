@@ -4,6 +4,10 @@
 
 #include "main.h"
 
+#define ID_UNTG MAKE_ID('U','N','T','G')
+#define ID_DOTS MAKE_ID('D','O','T','S')
+#define ID_LINE MAKE_ID('L','I','N','E')
+
 struct GameLevel *LoadLevel(struct Window *gamewin);
 
 /*---------------------*/
