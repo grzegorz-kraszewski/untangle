@@ -3,7 +3,8 @@ struct Library
 	*LayersBase,
 	*IntuitionBase,
 	*GadToolsBase,
-	*IFFParseBase;
+	*IFFParseBase,
+	*AslBase;
 	
 #include <proto/exec.h>
 #include <proto/intuition.h>
@@ -171,7 +172,13 @@ LONG GetKickstartLibs(struct App *app)
 
 					if (IFFParseBase = OpenLibrary("iffparse.library", 39))
 					{
-						result = OpenMyWindow(app);
+						result = SERR_NO_ASL;
+
+						if (AslBase = OpenLibrary("asl.library", 39))
+						{
+							result = OpenMyWindow(app);
+							CloseLibrary(AslBase);
+						}
 						CloseLibrary(IFFParseBase);
 					}
 					CloseLibrary(GadToolsBase);
@@ -191,7 +198,8 @@ static STRPTR StartupErrorMessages[] = {
 	"Can't open iffparse.library v39+.\n",
 	"Can't open game window.\n",
 	"Out of chip memory.\n",
-	"Can't create program menu (out of memory?).\n"
+	"Can't create program menu (out of memory?).\n",
+	"Can't open asl.library v39+.\n"
 };
 
 

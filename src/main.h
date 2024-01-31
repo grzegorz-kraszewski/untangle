@@ -36,7 +36,8 @@ extern struct Library
 	*LayersBase,
 	*IntuitionBase,
 	*GadToolsBase,
-	*IFFParseBase;
+	*IFFParseBase,
+	*AslBase;
 
 #define DOT_SIZE 7
 
@@ -49,6 +50,7 @@ extern struct Library
 #define SERR_NO_WINDOW                  3
 #define SERR_NO_CHIP_MEM                4
 #define SERR_MENU_LAYOUT                5
+#define SERR_NO_ASL                     6
 
 struct GameDot
 {

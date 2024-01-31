@@ -4,13 +4,14 @@
 #include <proto/intuition.h>
 #include <proto/gadtools.h>
 
-#define ACTION_NEW    43
-#define ACTION_QUIT   44
+#define ACTION_NEW           43
+#define ACTION_QUIT          44
+#define ACTION_SAVE_LEVEL    45
 
 struct NewMenu AppMenu[] = {
 	{ NM_TITLE, "Project", 0, 0, 0, 0 },
 	{ NM_ITEM, "New game", "N", 0, 0, (APTR)ACTION_NEW },
-//	{ NM_ITEM, "Open", "O", 0, 0, (APTR)ACTION_OPEN },
+	{ NM_ITEM, "Save level...", "S", 0, 0, (APTR)ACTION_SAVE_LEVEL },
 	{ NM_ITEM, NM_BARLABEL, 0, 0, 0, 0},
 	{ NM_ITEM, "Quit", "Q", 0, 0, (APTR)ACTION_QUIT },
 	{ NM_END, NULL, 0, 0, 0, 0 }
@@ -32,6 +33,10 @@ static BOOL Action(struct App *app, ULONG action)
 		
 		case ACTION_QUIT:
 			running = FALSE;
+		break;
+
+		case ACTION_SAVE_LEVEL:
+			SaveLevel(app);
 		break;
 	}
 	

@@ -11,7 +11,10 @@
 struct Library *SysBase;
 struct Library *DOSBase;
 
+UBYTE DOSName[];
+
 extern ULONG Main(void);
+
 
 __saveds ULONG Start(void)
 {
@@ -30,7 +33,7 @@ __saveds ULONG Start(void)
 		wbmsg = GetMsg(&myproc->pr_MsgPort);
 	}
 
-	if (DOSBase = OpenLibrary("dos.library", 39))
+	if (DOSBase = OpenLibrary(DOSName, 39))
 	{
 		result = Main();
 		CloseLibrary(DOSBase);
@@ -46,6 +49,7 @@ __saveds ULONG Start(void)
 	return result;
 }
 
+UBYTE DOSName[] = "dos.library";
 
 __attribute__((section(".text"))) UBYTE VString[] =
 	"$VER: Untangle 0.1 (3.2.2023)\r\n";
