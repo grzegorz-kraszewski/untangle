@@ -125,14 +125,14 @@ static LONG PrepareDotImage(struct App *app)
 		if (app->DotBitMap = AllocBitMap(DOT_SIZE, DOT_SIZE, 2, BMF_CLEAR, app->Win->RPort->BitMap))
 		{
 			struct RastPort tmrp;
-			
+
 			InitRastPort(&tmrp);
 			tmrp.BitMap = app->DotBitMap;
 			SetDrMd(&tmrp, JAM1);
 			SetAPen(&tmrp, 1);
-			BltTemplate((UBYTE*)DotRaster, 0, DOTRASTER_MODULO, &tmrp, 0, 0, DOT_SIZE, DOT_SIZE);
+			BltTemplate((UBYTE*)app->DotRaster, 0, DOTRASTER_MODULO, &tmrp, 0, 0, DOT_SIZE, DOT_SIZE);
 			SetAPen(&tmrp, 2);
-			BltTemplate((UBYTE*)&DotRaster[DOT_SIZE], 0, DOTRASTER_MODULO, &tmrp, 0, 0, DOT_SIZE, DOT_SIZE);		 
+			BltTemplate((UBYTE*)&app->DotRaster[DOT_SIZE], 0, DOTRASTER_MODULO, &tmrp, 0, 0, DOT_SIZE, DOT_SIZE);
 			err = SetupMenus(app);
 			FreeBitMap(app->DotBitMap);
 		}
