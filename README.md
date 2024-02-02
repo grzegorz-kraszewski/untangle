@@ -14,15 +14,11 @@ Project is developed on a real Amiga 1200 with 68020 @ 28 MHz and 64 MB fast RAM
 make
 ```
 in a shell.
-At the moment test level file ("level.iff") is built manually from assembler source "level.s" with
-```
-vasm -Fbin level.s -o level.iff
-```
-It implies that "vasm" assembler is also installed. This is a temporary solution, I plan to add feature of creation and saving levels in the game itself.
+To run the game a level set file "StandardSet.iff" has to be placed in the same directory as executable. The file is contained in releases. 
 ## Installation
-Executable may be copied anywhere. "level.iff" file should be in the same directory as executable. It runs from shell as well as from Workbench. For now there is no icon for it.
+Executable may be copied anywhere. "StandardSet.iff" file should be in the same directory as executable. It runs from shell as well as from Workbench.
 ## Usage
-After starting select "New" from menu (or `RAmiga + n` from keyboard) to load the test level.
+First level of the set is loaded automatically when game starts. Next level is loaded after current one is solved by the player.
 ## Requirements
 * Amiga with any processor (code is compiled for 68000).
 * Kickstart/Workbench 3.0 or higher.
