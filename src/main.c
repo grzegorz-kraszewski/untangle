@@ -67,7 +67,20 @@ void TheLoop(struct App *app)
 							if (app->Win->Flags & WFLG_REPORTMOUSE)
 							{
 						 		GameUnclick(app, imsg->MouseX, imsg->MouseY);
-						 	}
+
+						 		if (app->Level->InterCount == 0)
+						 		{
+									PutStr("Level completed!\n");
+									DisplayBeep(app->Win->WScreen);
+									Delay(75);
+									EraseGame(app);
+									UnloadLevel(app->Level);
+									app->Level = NULL;
+									app->LevelNumber++;
+									Printf("new game, level %ld\n", app->LevelNumber);
+									NewGame(app);
+								}
+							}
 						}
 					break;
 					
@@ -221,6 +234,7 @@ ULONG Main(void)
 	LONG error;
 
 	app.Level = NULL;
+	app.LevelNumber = 1;   /* will be loaded from progress file(?) */
 	
 	if (error = GetKickstartLibs(&app))
 	{
