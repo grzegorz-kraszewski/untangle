@@ -99,8 +99,6 @@ void PrecalculateLevel(struct GameLevel *glv)
 	struct GameLine *glia, *glib;
 	UBYTE *inter = glv->Intersections;
 
-	Printf("Precalculating intersections, %ld lines total.\n", glv->LineCount);
-
 	glv->InterCount = 0;
 
 	ForEachFwd(&glv->LineList, struct GameLine, glia)
@@ -118,7 +116,7 @@ void PrecalculateLevel(struct GameLevel *glv)
 		}
 	}
 
-	Printf("INTERSECTIONS: %ld.\n", glv->InterCount);
+	Printf("intersections: %ld.\n", glv->InterCount);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -146,5 +144,5 @@ void UpdateIntersections(struct GameLevel *glv)
 		}
 	}
 	
-	Printf("INTERSECTIONS: %ld.\n", glv->InterCount);
+	Printf("intersections: %ld.\n", glv->InterCount);
 }
