@@ -34,6 +34,8 @@ void TheLoop(struct App *app)
 
 	portmask = 1 << app->Win->UserPort->mp_SigBit;
 
+	NewGame(app);  /* later it should load last played level from save */
+	
 	while (running)
 	{
 		signals = Wait(portmask | SIGBREAKF_CTRL_C);
@@ -72,7 +74,7 @@ void TheLoop(struct App *app)
 						 		{
 									PutStr("Level completed!\n");
 									DisplayBeep(app->Win->WScreen);
-									Delay(75);
+									Delay(50);
 									EraseGame(app);
 									UnloadLevel(app->Level);
 									app->Level = NULL;
