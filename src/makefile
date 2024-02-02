@@ -25,5 +25,6 @@ loader.o: loader.c loader.h main.h
 lscm.o: lscm.c lscm.h main.h
 main.o: main.c main.h menu.h
 menu.o: menu.c main.h game.h
-savelevel.o: savelevel.c savelevel.h main.h
+savelevel.o: savelevel.c savelevel.h main.h loader.h
 start.o: start.c
+
