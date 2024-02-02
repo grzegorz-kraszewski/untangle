@@ -28,6 +28,7 @@ static BOOL Action(struct App *app, ULONG action)
 			EraseGame(app);
 			UnloadLevel(app->Level);
 			app->Level = NULL;
+			app->LevelNumber = 1;
 			NewGame(app);
 		break;
 		
