@@ -141,7 +141,55 @@ static LONG LoadDots(struct GameLevel *gl, struct IFFHandle *handle, WORD count)
 
 /*---------------------------------------------------------------------------*/
 
-static LONG OpenStructure(struct GameLevel *gl, struct IFFHandle *handle)
+static LONG LoadLevelData(struct GameLevel *gl, struct IFFHandle *handle)
+{
+	LONG err;
+	BOOL have_lines = FALSE;
+	BOOL have_dots = FALSE;
+	struct ContextNode *curch;
+	UBYTE strid[5];
+
+	StopChunk(handle, ID_UNTG, ID_DOTS);
+	StopChunk(handle, ID_UNTG, ID_LINE);
+	StopOnExit(handle, ID_UNTG, ID_FORM);
+
+	do
+	{
+		if (!(err = ParseIFF(handle, IFFPARSE_SCAN)))
+		{
+			curch = CurrentChunk(handle);
+
+			switch (curch->cn_ID)
+			{
+				case ID_DOTS:
+					if (!(err = LoadDots(gl, handle, curch->cn_Size / 4))) have_dots = TRUE;
+				break;
+
+				case ID_LINE:
+					if (have_dots)
+					{
+						 if (!(err = LoadLines(gl, handle, curch->cn_Size / 2))) have_lines = TRUE;
+					}
+					else err = LERR_LINES_BEFORE_DOTS;
+				break;
+			}
+		}
+	}
+	while (!err);
+
+	if (err == IFFERR_EOC)  /* it means parsing of level FORM as been finished */
+	{
+		err = 0;
+		if (!have_lines) err = LERR_MISSING_LINES;
+		if (!have_dots) err = LERR_MISSING_DOTS;
+	}
+
+	return err;
+}
+
+/*---------------------------------------------------------------------------*/
+
+static LONG SkipToLevel(struct GameLevel *gl, struct IFFHandle *handle, LONG level)
 {
 	LONG err;
 
@@ -152,38 +200,18 @@ static LONG OpenStructure(struct GameLevel *gl, struct IFFHandle *handle)
 		struct ContextNode *curch;
 		UBYTE strid[5];
 
-		StopChunk(handle, ID_UNTG, ID_DOTS);
-		StopChunk(handle, ID_UNTG, ID_LINE);
+		StopChunk(handle, ID_UNTG, ID_FORM);
 
-		do
+		while (!err && (level > 0))
 		{
-			if (!(err = ParseIFF(handle, IFFPARSE_SCAN)))
-			{
-				curch = CurrentChunk(handle);
-
-				switch (curch->cn_ID)
-				{
-					case ID_DOTS:
-						if (!(err = LoadDots(gl, handle, curch->cn_Size / 4))) have_dots = TRUE;
-					break;
-
-					case ID_LINE:
-						if (have_dots)
-						{
-							 if (!(err = LoadLines(gl, handle, curch->cn_Size / 2))) have_lines = TRUE;
-						}
-						else err = LERR_LINES_BEFORE_DOTS;
-					break;
-				}
-			}
+			err = ParseIFF(handle, IFFPARSE_SCAN);
+			if (!err) level--;
 		}
-		while (!err);
 
-		if (err == IFFERR_EOF)  /* it means parsing has been finished with no errors */
+		if (!err) err = LoadLevelData(gl, handle);
+		else if (err == IFFERR_EOF)  /* file ended before desired level has been reached */
 		{
-			err = 0;
-			if (!have_lines) err = LERR_MISSING_LINES;
-			if (!have_dots) err = LERR_MISSING_DOTS;
+			err = LERR_NO_SUCH_LEVEL;
 		}
 
 		CloseIFF(handle);
@@ -194,18 +222,16 @@ static LONG OpenStructure(struct GameLevel *gl, struct IFFHandle *handle)
 
 /*---------------------------------------------------------------------------*/
 
-static LONG OpenFile(struct GameLevel *gl, struct IFFHandle *handle)
+static LONG OpenFile(struct GameLevel *gl, struct IFFHandle *handle, LONG level)
 {
 	LONG err = LERR_FILE_OPEN_FAILED;
 	BPTR levfile;
 
-	SetIoErr(0);
-
-	if (levfile = Open("PROGDIR:level.iff", MODE_OLDFILE))
+	if (levfile = Open("PROGDIR:StandardSet.iff", MODE_OLDFILE))
 	{
 		handle->iff_Stream = levfile;
 		InitIFFasDOS(handle);
-		err = OpenStructure(gl, handle);
+		err = SkipToLevel(gl, handle, level);
 		Close(levfile);
 	}
 
@@ -214,14 +240,14 @@ static LONG OpenFile(struct GameLevel *gl, struct IFFHandle *handle)
 
 /*---------------------------------------------------------------------------*/
 
-static LONG LoadLevel2(struct GameLevel *gl)
+static LONG LoadLevel2(struct GameLevel *gl, LONG level)
 {
 	struct IFFHandle *handle;
 	LONG err;
 
 	if (handle = AllocIFF())
 	{
-		err = OpenFile(gl, handle);
+		err = OpenFile(gl, handle, level);
 		FreeIFF(handle);
 	}
 	else err = LERR_OUT_OF_MEMORY;
@@ -233,14 +259,15 @@ static LONG LoadLevel2(struct GameLevel *gl)
 
 static STRPTR LoadErrorMessages[] = {
 	"Out of memory.",
-	"Can't open file \"PROGDIR:level.iff\":\n%s.",
-	"No 'DOTS' chunk found in level file.",
-	"No 'LINE' chunk found in level file.",
+	"Can't open level set \"StandardSet.iff\":\n%s.",
+	"No 'DOTS' chunk found in level.",
+	"No 'LINE' chunk found in level.",
 	"'LINE' chunk encountered before 'DOTS' one.",
 	"More than 256 dots defined in the file.",
 	"Negative dot coordinates are not allowed.",
 	"Index of non-existent dot in a line definition.",
-	"Duplicate line detected."
+	"Duplicate line detected.",
+	"No more levels in set."
 };
 
 static void ReportLoadError(struct Window *gwin, LONG err)
@@ -291,7 +318,7 @@ void UnloadLevel(struct GameLevel *gl)
 
 /*---------------------------------------------------------------------------*/
 
-struct GameLevel* LoadLevel(struct Window *gwin)
+struct GameLevel* LoadLevel(struct Window *gwin, LONG level)
 {
 	struct GameLevel *gl;
 	LONG err = LERR_OUT_OF_MEMORY;
@@ -305,7 +332,7 @@ struct GameLevel* LoadLevel(struct Window *gwin)
 		InitList(&gl->DraggedLines);
 		gl->DraggedDot = NULL;
 		gl->Intersections = NULL;
-		err = LoadLevel2(gl);
+		err = LoadLevel2(gl, level);
 	}
 
 	if (err)

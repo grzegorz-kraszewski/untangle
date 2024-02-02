@@ -8,7 +8,7 @@
 #define ID_DOTS MAKE_ID('D','O','T','S')
 #define ID_LINE MAKE_ID('L','I','N','E')
 
-struct GameLevel *LoadLevel(struct Window *gamewin);
+struct GameLevel *LoadLevel(struct Window *gamewin, LONG level);
 
 /*---------------------*/
 /* loading error codes */
@@ -23,3 +23,4 @@ struct GameLevel *LoadLevel(struct Window *gamewin);
 #define LERR_DOT_COORDINATE_NEGATIVE         7
 #define LERR_DOT_INDEX_OUT_OF_RANGE          8
 #define LERR_DUPLICATE_LINE                  9
+#define LERR_NO_SUCH_LEVEL                  10
