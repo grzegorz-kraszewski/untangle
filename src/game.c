@@ -266,6 +266,7 @@ void GameClick(struct App *app, WORD x, WORD y)
 	{
 		if (clicked = FindClickedDot(app, x, y))
 		{
+			Printf("clicked dot %ld.\n", clicked - app->Level->DotStorage);
 			MoveDraggedItems(app->Level, clicked);
 			EraseDraggedItems(app);
 			DrawGame(app);
@@ -313,7 +314,7 @@ void GameDotDrag(struct App *app, WORD x, WORD y)
 
 void NewGame(struct App *app)
 {
-	if (app->Level = LoadLevel(app->Win))
+	if (app->Level = LoadLevel(app->Win, app->LevelNumber))
 	{
 		PrecalculateLevel(app->Level);
 		ScaleGame(app);
