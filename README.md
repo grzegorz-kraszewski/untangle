@@ -2,6 +2,8 @@
 Amiga port of a popular logic game.
 ## The Game
 Untangle is a logic puzzle, where the player faces a set of dots connected by lines. Usually the set is untidy, many lines cross another ones. The game goal is to untangle lines by moving dots, so finally no line cross another.
+
+![game screenshot, set of tangled lines connecting dots](https://cdn.rastport.com/var/untangle_mini.png)
 ## Project Goals
 * Game should be system friendly, working in a window on Workbench, using only documented APIs.
 * Minimum system version is 3.0.
