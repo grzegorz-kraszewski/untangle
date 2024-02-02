@@ -52,4 +52,4 @@ __saveds ULONG Start(void)
 UBYTE DOSName[] = "dos.library";
 
 __attribute__((section(".text"))) UBYTE VString[] =
-	"$VER: Untangle 0.1 (3.2.2023)\r\n";
+	"$VER: Untangle 0.1 (02.02.2024)\r\n";
