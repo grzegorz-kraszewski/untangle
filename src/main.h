@@ -89,6 +89,7 @@ struct App
 	struct BitMap *DotBitMap;
 	struct Rectangle Field;
 	struct GameLevel *Level;
+	LONG LevelNumber;                  /* counted from 1, ordinal number in a set */
 };
 
 #endif  /* UNTANGLE_MAIN_H */
