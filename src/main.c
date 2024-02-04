@@ -14,6 +14,10 @@ struct Library
 
 #include "main.h"
 #include "menu.h"
+#include "strutils.h"
+
+STRPTR DefScreenTitle = "Untangle 0.2 by RastPort 2024";
+STRPTR DefWindowTitle = "Untangle";
 
 /*---------------------------------------------------------------------------*/
 
@@ -72,14 +76,12 @@ void TheLoop(struct App *app)
 
 						 		if (app->Level->InterCount == 0)
 						 		{
-									PutStr("Level completed!\n");
 									DisplayBeep(app->Win->WScreen);
 									Delay(50);
 									EraseGame(app);
 									UnloadLevel(app->Level);
 									app->Level = NULL;
 									app->LevelNumber++;
-									Printf("new game, level %ld\n", app->LevelNumber);
 									NewGame(app);
 								}
 							}
@@ -114,7 +116,8 @@ struct TagItem wintags[] = {
 	{ WA_CloseGadget, TRUE },
 	{ WA_DepthGadget, TRUE },
 	{ WA_SizeGadget, TRUE },
-	{ WA_Title, (ULONG)"Untangle" },
+	{ WA_Title, 0 /* DefWindowTitle */ },
+	{ WA_ScreenTitle, 0, /* DefScreenTitle */ },
 	{ WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_MENUPICK | IDCMP_NEWSIZE | IDCMP_MOUSEBUTTONS | IDCMP_MOUSEMOVE },
 	{ WA_NewLookMenus, TRUE },
 	{ WA_Activate, TRUE },
@@ -161,6 +164,9 @@ static LONG OpenMyWindow(struct App *app)
 {
 	LONG err = SERR_NO_WINDOW;
 	 
+	wintags[10].ti_Data = (LONG)DefWindowTitle;
+	wintags[11].ti_Data = (LONG)DefScreenTitle;
+
 	if (app->Win = OpenWindowTagList(NULL, wintags))
 	{
 		err = PrepareDotImage(app);
@@ -233,16 +239,21 @@ static void ReportStartupError(err)
 ULONG Main(void)
 {
 	struct App app;
-	LONG error;
+	LONG error, result = RETURN_OK;
 
 	app.Level = NULL;
-	app.LevelNumber = 1;   /* will be loaded from progress file(?) */
+	app.LevelNumber = 1;                 /* will be loaded from progress file(?) */
+	app.DynamicScreenTitle = NULL;
+	app.DynamicWindowTitle = NULL;
 	
 	if (error = GetKickstartLibs(&app))
 	{
 		ReportStartupError(error);
-		return RETURN_FAIL;
+		result = RETURN_FAIL;
 	}
 
-	return 0;
+	if (app.DynamicScreenTitle) StrFree(app.DynamicScreenTitle);
+	if (app.DynamicWindowTitle) StrFree(app.DynamicWindowTitle);
+
+	return result;
 }

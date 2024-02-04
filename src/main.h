@@ -79,6 +79,8 @@ struct GameLevel
 	LONG DotCount;                     /* total number of dots */
 	LONG LineCount;                    /* total number of lines */
 	LONG InterCount;                   /* current number of intersections, 0 = level solved */
+	STRPTR LevelSetName;
+	STRPTR LevelSetAuthor;
 };
 
 struct App
@@ -90,6 +92,8 @@ struct App
 	struct Rectangle Field;
 	struct GameLevel *Level;
 	LONG LevelNumber;                  /* counted from 1, ordinal number in a set */
+	STRPTR DynamicScreenTitle;
+	STRPTR DynamicWindowTitle;
 };
 
 #endif  /* UNTANGLE_MAIN_H */
