@@ -13,6 +13,7 @@ struct Library
 #include <proto/gadtools.h>
 #include <proto/graphics.h>
 #include <proto/icon.h>
+#include <workbench/startup.h>
 
 #include "main.h"
 #include "menu.h"
@@ -212,22 +213,40 @@ static LONG OpenMyWindow(struct App *app)
 
 /*---------------------------------------------------------------------------*/
 
-static LONG GetUntanglePrefs(struct App *app)
+static LONG GetUntanglePrefs(struct App *app, struct WBStartup *wbmsg)
 {
-	UBYTE progname[16];
-	LONG result = RETURN_OK;
-
-	if (GetProgramName(progname, 16))
+	if (wbmsg)     /* if launched from CLI sorry, no prefs */
 	{
-		result = OpenMyWindow(app);
-	}
+		struct DiskObject *dobj;
+		BPTR olddir;
 
-	return result;
+		olddir = CurrentDir(wbmsg->sm_ArgList[0].wa_Lock);
+
+		if (dobj = GetDiskObject(wbmsg->sm_ArgList[0].wa_Name))
+		{
+			LONG dotsize;
+			STRPTR value;
+
+			value = FindToolType((CONST_STRPTR*)dobj->do_ToolTypes, "DOTSIZE");
+
+			if (value)
+			{
+				StrToLong(value, &dotsize);
+				if ((dotsize >= 1) && (dotsize <= 6)) app->DotSize = dotsize * 2 + 3;
+			}
+			
+			FreeDiskObject(dobj);
+		}
+
+		CurrentDir(olddir);
+	}	
+
+	return OpenMyWindow(app);
 }
 
 /*---------------------------------------------------------------------------*/
 
-static LONG GetKickstartLibs(struct App *app)
+static LONG GetKickstartLibs(struct App *app, struct WBStartup *wbmsg)
 {
 	LONG result = SERR_SYSTEM_TOO_OLD;
 
@@ -250,7 +269,7 @@ static LONG GetKickstartLibs(struct App *app)
 							/* icon.library is optional */
 
 							IconBase = OpenLibrary("icon.library", 39);
-							result = GetUntanglePrefs(app);
+							result = GetUntanglePrefs(app, wbmsg);
 							if (IconBase) CloseLibrary(IconBase);
 							CloseLibrary(AslBase);
 						}
@@ -290,7 +309,7 @@ static void ReportStartupError(err)
 }
 
 
-ULONG Main(void)
+ULONG Main(struct WBStartup *wbmsg)
 {
 	struct App app;
 	LONG error, result = RETURN_OK;
@@ -301,7 +320,7 @@ ULONG Main(void)
 	app.DynamicWindowTitle = NULL;
 	app.DotSize = 9;                     /* default if icon toolype does not exist / can't be read */
 	
-	if (error = GetKickstartLibs(&app))
+	if (error = GetKickstartLibs(&app, wbmsg))
 	{
 		ReportStartupError(error);
 		result = RETURN_FAIL;

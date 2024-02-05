@@ -15,13 +15,13 @@ struct Library *DOSBase;
 
 UBYTE DOSName[];
 
-extern ULONG Main(void);
+extern ULONG Main(struct WBStartup*);
 
 
 __saveds ULONG Start(void)
 {
 	struct Process *myproc = NULL;
-	struct Message *wbmsg = NULL;
+	struct WBStartup *wbmsg = NULL;
 	BOOL have_shell = FALSE;
 	ULONG result = RETURN_OK;
 
@@ -32,12 +32,12 @@ __saveds ULONG Start(void)
 	if (!have_shell)
 	{
 		WaitPort(&myproc->pr_MsgPort);
-		wbmsg = GetMsg(&myproc->pr_MsgPort);
+		wbmsg = (struct WBStartup*)GetMsg(&myproc->pr_MsgPort);
 	}
 
 	if (DOSBase = OpenLibrary(DOSName, 39))
 	{
-		result = Main();
+		result = Main(wbmsg);
 		CloseLibrary(DOSBase);
 	}
 	else result = RETURN_FAIL;
@@ -45,7 +45,7 @@ __saveds ULONG Start(void)
 	if (wbmsg)
 	{
 		Forbid();
-		ReplyMsg(wbmsg);
+		ReplyMsg(&wbmsg->sm_Message);
 	}
 
 	return result;
