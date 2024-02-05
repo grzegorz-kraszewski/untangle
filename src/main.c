@@ -4,19 +4,22 @@ struct Library
 	*IntuitionBase,
 	*GadToolsBase,
 	*IFFParseBase,
-	*AslBase;
+	*AslBase,
+	*IconBase;
 	
 #include <proto/exec.h>
 #include <proto/intuition.h>
 #include <proto/dos.h>
 #include <proto/gadtools.h>
 #include <proto/graphics.h>
+#include <proto/icon.h>
 
 #include "main.h"
 #include "menu.h"
 #include "strutils.h"
+#include "version.h"
 
-STRPTR DefScreenTitle = "Untangle 0.2 by RastPort 2024";
+STRPTR DefScreenTitle = "Untangle " VERSION " by RastPort " RELYEAR;
 STRPTR DefWindowTitle = "Untangle";
 
 /*---------------------------------------------------------------------------*/
@@ -127,20 +130,47 @@ struct TagItem wintags[] = {
 
 /* The first plane of DotRaster also serves as a mask for blitting. */
 
-UWORD DotRaster[DOT_SIZE * 2] = {0x3800, 0x7C00, 0xFE00, 0xFE00, 0xFE00, 0x7C00, 0x3800,
-                                 0x0000, 0x3800, 0x7C00, 0x7C00, 0x7C00, 0x3800, 0x0000};
+UWORD DotRaster5[10] = {
+	0x7000, 0xF800, 0xF800, 0xF800, 0x7000,
+	0x0000, 0x7000, 0x7000, 0x7000, 0x0000 };
+
+UWORD DotRaster7[14] = {
+	0x3800, 0x7C00, 0xFE00, 0xFE00, 0xFE00, 0x7C00, 0x3800,
+	0x0000, 0x3800, 0x7C00, 0x7C00, 0x7C00, 0x3800, 0x0000 };
+
+UWORD DotRaster9[18] = {
+	0x1C00, 0x3E00, 0x7F00, 0xFF80, 0xFF80, 0xFF80, 0x7F00, 0x3E00,	0x1C00,
+	0x0000, 0x1C00, 0x3E00, 0x7F00, 0x7F00, 0x7F00, 0x3E00, 0x1C00,	0x0000 };
+
+UWORD DotRaster11[22] = {
+	0x1F00, 0x3F80, 0x7FC0, 0xFFE0, 0xFFE0, 0xFFE0, 0xFFE0, 0xFFE0,	0x7FC0, 0x3F80, 0x1F00,
+	0x0000, 0x1F00, 0x3F80, 0x7FC0, 0x7FC0, 0x7FC0, 0x7FC0, 0x7FC0,	0x3F80, 0x1F00, 0x0000 };
+
+UWORD DotRaster13[26] = {
+	0x0F80, 0x3FE0, 0x7FF0, 0x7FF0, 0xFFF8, 0xFFF8, 0xFFF8, 0xFFF8,	0xFFF8, 0x7FF0, 0x7FF0,
+	0x3FE0, 0x0F80,	0x0000, 0x0F80, 0x3FE0, 0x3FE0, 0x7FF0, 0x7FF0, 0x7FF0, 0x7FF0,	0x7FF0,
+	0x3FE0, 0x3FE0, 0x0F80, 0x0000 };
+
+UWORD DotRaster15[30] = {
+	0x07C0, 0x1FF0, 0x3FF8, 0x7FFC, 0x7FFC, 0xFFFE, 0xFFFE, 0xFFFE,	0xFFFE, 0xFFFE, 0x7FFC,
+	0x7FFC, 0x3FF8, 0x1FF0, 0x07C0,	0x0000, 0x07C0, 0x1FF0, 0x3FF8, 0x3FF8, 0x7FFC, 0x7FFC,
+	0x7FFC,	0x7FFC, 0x7FFC, 0x3FF8, 0x3FF8, 0x1FF0, 0x07C0, 0x0000 };
+
+UWORD *DotData[6] = { DotRaster5, DotRaster7, DotRaster9, DotRaster11, DotRaster13, DotRaster15 };
 
 #define DOTRASTER_MODULO 2
 
 static LONG PrepareDotImage(struct App *app)
 {
-	LONG err = SERR_NO_CHIP_MEM;
-	
-	if (app->DotRaster = AllocMem(sizeof(DotRaster), MEMF_CHIP))
+	LONG rassize, err = SERR_NO_CHIP_MEM;
+
+	rassize = app->DotSize * DOTRASTER_MODULO * sizeof(UWORD);
+ 
+	if (app->DotRaster = AllocMem(rassize, MEMF_CHIP))
 	{
-		CopyMem(DotRaster, app->DotRaster, sizeof(DotRaster));
-		
-		if (app->DotBitMap = AllocBitMap(DOT_SIZE, DOT_SIZE, 2, BMF_CLEAR, app->Win->RPort->BitMap))
+		CopyMem(DotData[(app->DotSize >> 1) - 2], app->DotRaster, rassize);
+
+		if (app->DotBitMap = AllocBitMap(app->DotSize, app->DotSize, 2, BMF_CLEAR, app->Win->RPort->BitMap))
 		{
 			struct RastPort tmrp;
 
@@ -148,14 +178,18 @@ static LONG PrepareDotImage(struct App *app)
 			tmrp.BitMap = app->DotBitMap;
 			SetDrMd(&tmrp, JAM1);
 			SetAPen(&tmrp, 1);
-			BltTemplate((UBYTE*)app->DotRaster, 0, DOTRASTER_MODULO, &tmrp, 0, 0, DOT_SIZE, DOT_SIZE);
+			BltTemplate((UBYTE*)app->DotRaster, 0, DOTRASTER_MODULO, &tmrp, 0, 0, app->DotSize,
+				app->DotSize);
 			SetAPen(&tmrp, 2);
-			BltTemplate((UBYTE*)&app->DotRaster[DOT_SIZE], 0, DOTRASTER_MODULO, &tmrp, 0, 0, DOT_SIZE, DOT_SIZE);
+			BltTemplate((UBYTE*)&app->DotRaster[app->DotSize], 0, DOTRASTER_MODULO, &tmrp, 0, 0,
+				app->DotSize, app->DotSize);
 			err = SetupMenus(app);
 			FreeBitMap(app->DotBitMap);
 		}
-		FreeMem(app->DotRaster, sizeof(DotRaster));
+
+		FreeMem(app->DotRaster, rassize);
 	}
+
 	return err;
 }
 
@@ -176,6 +210,7 @@ static LONG OpenMyWindow(struct App *app)
 	return err;
 }
 
+/*---------------------------------------------------------------------------*/
 
 LONG GetKickstartLibs(struct App *app)
 {
@@ -197,7 +232,12 @@ LONG GetKickstartLibs(struct App *app)
 
 						if (AslBase = OpenLibrary("asl.library", 39))
 						{
+							/* icon.library is optional */
+
+							IconBase = OpenLibrary("icon.library", 39);
+							Printf("IconBase @ $%08lx.\n", (LONG)IconBase);
 							result = OpenMyWindow(app);
+							if (IconBase) CloseLibrary(IconBase);
 							CloseLibrary(AslBase);
 						}
 						CloseLibrary(IFFParseBase);
@@ -220,7 +260,7 @@ static STRPTR StartupErrorMessages[] = {
 	"Can't open game window.\n",
 	"Out of chip memory.\n",
 	"Can't create program menu (out of memory?).\n",
-	"Can't open asl.library v39+.\n"
+	"Can't open asl.library v39+.\n",
 };
 
 
@@ -245,6 +285,7 @@ ULONG Main(void)
 	app.LevelNumber = 1;                 /* will be loaded from progress file(?) */
 	app.DynamicScreenTitle = NULL;
 	app.DynamicWindowTitle = NULL;
+	app.DotSize = 9;                     /* default if icon toolype does not exist / can't be read */
 	
 	if (error = GetKickstartLibs(&app))
 	{

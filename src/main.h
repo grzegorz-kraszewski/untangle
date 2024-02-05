@@ -37,9 +37,10 @@ extern struct Library
 	*IntuitionBase,
 	*GadToolsBase,
 	*IFFParseBase,
-	*AslBase;
+	*AslBase,
+	*IconBase;
 
-#define DOT_SIZE 7
+//#define DOT_SIZE 7
 
 /*---------------------*/
 /* startup error codes */
@@ -94,6 +95,7 @@ struct App
 	LONG LevelNumber;                  /* counted from 1, ordinal number in a set */
 	STRPTR DynamicScreenTitle;
 	STRPTR DynamicWindowTitle;
+	WORD DotSize;                      /* pixels [ 5, 7, 9, 11, 13, 15 ] */
 };
 
 #endif  /* UNTANGLE_MAIN_H */

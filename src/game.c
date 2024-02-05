@@ -2,6 +2,7 @@
 #include "loader.h"
 #include "lscm.h"
 #include "strutils.h"
+#include "version.h"
 
 #include <proto/exec.h>
 #include <proto/graphics.h>
@@ -10,8 +11,8 @@
 
 #include <intuition/intuition.h>
 
-#define MARGIN (DOT_SIZE / 2 + 1)
-#define DOT_RADIUS (DOT_SIZE / 2)
+//#define MARGIN (DOT_SIZE / 2 + 1)
+//#define DOT_RADIUS (DOT_SIZE / 2)
 
 /*---------------------------------------------------------------------------*/
 /* Game levels are generated in virtual coordinate system: a square of 32768 */
@@ -67,13 +68,13 @@ void DrawLines(struct RastPort *rp, struct MinList *lines)
 
 void DrawDots(struct RastPort *rp, struct App *app)
 {
-	WORD dotradius = DOT_SIZE >> 1;
+	WORD dotradius = app->DotSize >> 1;
 	struct GameDot *gd;
 
 	ForEachFwd(&app->Level->DotList, struct GameDot, gd)
 	{
 		BltMaskBitMapRastPort(app->DotBitMap, 0, 0, rp, gd->Pixel.x - dotradius,
-			gd->Pixel.y - dotradius, DOT_SIZE, DOT_SIZE, 0xE0, (APTR)app->DotRaster);
+			gd->Pixel.y - dotradius, app->DotSize, app->DotSize, 0xE0, (APTR)app->DotRaster);
 	}
 }
 
@@ -96,10 +97,12 @@ void DrawGame(struct App *app)
 
 void ScaleGame(struct App *app)
 {
-	app->Field.MinX = app->Win->BorderLeft + MARGIN;
-	app->Field.MinY = app->Win->BorderTop + MARGIN;
-	app->Field.MaxX = app->Win->Width - app->Win->BorderRight - MARGIN - 1;
-	app->Field.MaxY = app->Win->Height - app->Win->BorderBottom - MARGIN - 1;
+	WORD margin = (app->DotSize >> 1) + 1;
+
+	app->Field.MinX = app->Win->BorderLeft + margin;
+	app->Field.MinY = app->Win->BorderTop + margin;
+	app->Field.MaxX = app->Win->Width - app->Win->BorderRight - margin - 1;
+	app->Field.MaxY = app->Win->Height - app->Win->BorderBottom - margin - 1;
 	if (app->Level) TransformAllDots(&app->Level->DotList, &app->Field);
 }
 
@@ -123,12 +126,13 @@ static inline BOOL MaskHit(UWORD x, UWORD y, CONST UWORD *mask)
 
 /*---------------------------------------------------------------------------*/
 
-static inline BOOL InsideBox(UWORD clkx, UWORD clky, UWORD dotx, UWORD doty)
+static inline BOOL InsideBox(UWORD clkx, UWORD clky, UWORD dotx, UWORD doty, UWORD dotr)
 {
-	if (clkx < dotx - DOT_RADIUS) return FALSE;
-	if (clkx > dotx + DOT_RADIUS) return FALSE;
-	if (clky < doty - DOT_RADIUS) return FALSE;
-	if (clky > doty + DOT_RADIUS) return FALSE;
+	
+	if (clkx < dotx - dotr) return FALSE;
+	if (clkx > dotx + dotr) return FALSE;
+	if (clky < doty - dotr) return FALSE;
+	if (clky > doty + dotr) return FALSE;
 	return TRUE;
 }
 
@@ -136,10 +140,12 @@ static inline BOOL InsideBox(UWORD clkx, UWORD clky, UWORD dotx, UWORD doty)
 
 BOOL DotClicked(struct App *app, struct GameDot* dot, UWORD x, UWORD y)
 {
-	if (InsideBox(dot->Pixel.x, dot->Pixel.y, x, y))
+	UWORD dotr = app->DotSize >> 1;
+
+	if (InsideBox(dot->Pixel.x, dot->Pixel.y, x, y, dotr >> 1))
 	{
-		UWORD bbx = x + DOT_RADIUS - dot->Pixel.x;
-		UWORD bby = y + DOT_RADIUS - dot->Pixel.y;
+		UWORD bbx = x + dotr - dot->Pixel.x;
+		UWORD bby = y + dotr - dot->Pixel.y;
 		if (MaskHit(bbx, bby, app->DotRaster)) return TRUE;
 	}
 
@@ -230,8 +236,10 @@ void MoveDraggedItemsBack(struct GameLevel *glv)
 
 void EraseDot(struct App *app, struct GameDot *gd)
 {
-	BltTemplate((CONST PLANEPTR)app->DotRaster, 0, 2, app->Win->RPort, gd->Pixel.x - DOT_RADIUS,
-	 gd->Pixel.y - DOT_RADIUS, DOT_SIZE, DOT_SIZE);
+	WORD dotr = app->DotSize >> 1;
+
+	BltTemplate((CONST PLANEPTR)app->DotRaster, 0, 2, app->Win->RPort, gd->Pixel.x - dotr,
+	 gd->Pixel.y - dotr, app->DotSize, app->DotSize);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -324,7 +332,7 @@ void UpdateInfosAfterLevelLoad(struct App *app)
 	args[0] = app->Level->LevelSetName;
 	args[1] = app->Level->LevelSetAuthor;
 
-	if (title = VFmtNew("Untangle 0.2: %s by %s", args))
+	if (title = VFmtNew("Untangle " VERSION ": %s by %s", args))
 	{
 		if (app->DynamicScreenTitle) StrFree(app->DynamicScreenTitle);
 		app->DynamicScreenTitle = title;		
