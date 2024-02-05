@@ -8,6 +8,8 @@
 #include <dos/dos.h>
 #include <workbench/startup.h>
 
+#include "version.h"
+
 struct Library *SysBase;
 struct Library *DOSBase;
 
@@ -52,4 +54,4 @@ __saveds ULONG Start(void)
 UBYTE DOSName[] = "dos.library";
 
 __attribute__((section(".text"))) UBYTE VString[] =
-	"$VER: Untangle 0.1 (02.02.2024)\r\n";
+	"$VER: Untangle " VERSION " (" RELDATE ")\r\n";
