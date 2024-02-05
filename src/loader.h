@@ -7,6 +7,8 @@
 #define ID_UNTG MAKE_ID('U','N','T','G')
 #define ID_DOTS MAKE_ID('D','O','T','S')
 #define ID_LINE MAKE_ID('L','I','N','E')
+#define ID_SNME MAKE_ID('S','N','M','E')
+#define ID_AUTH MAKE_ID('A','U','T','H')
 
 struct GameLevel *LoadLevel(struct Window *gamewin, LONG level);
 

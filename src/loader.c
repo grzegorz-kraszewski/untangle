@@ -3,6 +3,7 @@
 /*------------------*/
 
 #include "loader.h"
+#include "strutils.h"
 
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -189,9 +190,41 @@ static LONG LoadLevelData(struct GameLevel *gl, struct IFFHandle *handle)
 
 /*---------------------------------------------------------------------------*/
 
+APTR CopyProperty(struct IFFHandle *handle, ULONG type, ULONG id)
+{
+	struct StoredProperty *sp;
+	APTR pdata = NULL;
+
+	if (sp = FindProp(handle, type, id))
+	{
+		if (pdata = AllocVec(sp->sp_Size, MEMF_ANY))
+		{
+			CopyMem(sp->sp_Data, pdata, sp->sp_Size);
+		}
+	}
+
+	return pdata;
+}
+
+/*---------------------------------------------------------------------------*/
+
+void StoreLevelProperties(struct GameLevel *gl, struct IFFHandle *handle)
+{
+	struct StoredProperty *sp;
+
+	/* Properties are optional, so when they are missing, or cannot be copied */
+	/* due to lack of free memory, it is not fatal.                           */
+
+	gl->LevelSetName = CopyProperty(handle, ID_UNTG, ID_SNME);
+	gl->LevelSetAuthor = CopyProperty(handle, ID_UNTG, ID_AUTH);	
+}
+
+/*---------------------------------------------------------------------------*/
+
 static LONG SkipToLevel(struct GameLevel *gl, struct IFFHandle *handle, LONG level)
 {
 	LONG err;
+	const LONG propchunks[4] = { ID_UNTG, ID_AUTH, ID_UNTG, ID_SNME };
 
 	if ((err = OpenIFF(handle, IFFF_READ)) == 0)
 	{
@@ -200,18 +233,23 @@ static LONG SkipToLevel(struct GameLevel *gl, struct IFFHandle *handle, LONG lev
 		struct ContextNode *curch;
 		UBYTE strid[5];
 
-		StopChunk(handle, ID_UNTG, ID_FORM);
-
-		while (!err && (level > 0))
+		if (!(err = PropChunks(handle, propchunks, 2)))
 		{
-			err = ParseIFF(handle, IFFPARSE_SCAN);
-			if (!err) level--;
-		}
+			StopChunk(handle, ID_UNTG, ID_FORM);
 
-		if (!err) err = LoadLevelData(gl, handle);
-		else if (err == IFFERR_EOF)  /* file ended before desired level has been reached */
-		{
-			err = LERR_NO_SUCH_LEVEL;
+			while (!err && (level > 0))
+			{
+				err = ParseIFF(handle, IFFPARSE_SCAN);
+				if (!err) level--;
+			}
+
+			if (!err) err = LoadLevelData(gl, handle);
+			else if (err == IFFERR_EOF)  /* file ended before desired level has been reached */
+			{
+				err = LERR_NO_SUCH_LEVEL;
+			}
+
+			if (!err) StoreLevelProperties(gl, handle); 
 		}
 
 		CloseIFF(handle);
@@ -312,6 +350,8 @@ void UnloadLevel(struct GameLevel *gl)
 		if (gl->DotStorage) FreeVec(gl->DotStorage);
 		if (gl->LineStorage) FreeVec(gl->LineStorage);
 		if (gl->Intersections) FreeVec(gl->Intersections);
+		if (gl->LevelSetName) FreeVec(gl->LevelSetName);
+		if (gl->LevelSetAuthor) FreeVec(gl->LevelSetAuthor);
 		FreeMem(gl, sizeof(struct GameLevel));
 	}
 }
@@ -332,6 +372,8 @@ struct GameLevel* LoadLevel(struct Window *gwin, LONG level)
 		InitList(&gl->DraggedLines);
 		gl->DraggedDot = NULL;
 		gl->Intersections = NULL;
+		gl->LevelSetName = NULL;
+		gl->LevelSetAuthor = NULL;
 		err = LoadLevel2(gl, level);
 	}
 

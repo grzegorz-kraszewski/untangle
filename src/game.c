@@ -1,6 +1,7 @@
 #include "main.h"
 #include "loader.h"
 #include "lscm.h"
+#include "strutils.h"
 
 #include <proto/exec.h>
 #include <proto/graphics.h>
@@ -311,6 +312,37 @@ void GameDotDrag(struct App *app, WORD x, WORD y)
 }
 
 /*---------------------------------------------------------------------------*/
+/* - Updates screen bar with level set name and author.                      */
+/* - Updates window bar with level set name and number of level.             */
+/*---------------------------------------------------------------------------*/
+
+void UpdateInfosAfterLevelLoad(struct App *app)
+{
+	STRPTR title;
+	APTR args[2];
+
+	args[0] = app->Level->LevelSetName;
+	args[1] = app->Level->LevelSetAuthor;
+
+	if (title = VFmtNew("Untangle 0.2: %s by %s", args))
+	{
+		if (app->DynamicScreenTitle) StrFree(app->DynamicScreenTitle);
+		app->DynamicScreenTitle = title;		
+	}
+
+	args[0] = app->Level->LevelSetName;
+	args[1] = (APTR)app->LevelNumber;
+
+	if (title = VFmtNew("Untangle: %s, Level %ld", args))
+	{
+		if (app->DynamicWindowTitle) StrFree(app->DynamicWindowTitle);
+		app->DynamicWindowTitle = title;		
+	}
+
+	SetWindowTitles(app->Win, app->DynamicWindowTitle, app->DynamicScreenTitle);
+}
+
+/*---------------------------------------------------------------------------*/
 
 void NewGame(struct App *app)
 {
@@ -319,5 +351,6 @@ void NewGame(struct App *app)
 		PrecalculateLevel(app->Level);
 		ScaleGame(app);
 		DrawGame(app);
+		UpdateInfosAfterLevelLoad(app);
 	}
 }
