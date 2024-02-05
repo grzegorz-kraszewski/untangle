@@ -212,7 +212,22 @@ static LONG OpenMyWindow(struct App *app)
 
 /*---------------------------------------------------------------------------*/
 
-LONG GetKickstartLibs(struct App *app)
+static LONG GetUntanglePrefs(struct App *app)
+{
+	UBYTE progname[16];
+	LONG result = RETURN_OK;
+
+	if (GetProgramName(progname, 16))
+	{
+		result = OpenMyWindow(app);
+	}
+
+	return result;
+}
+
+/*---------------------------------------------------------------------------*/
+
+static LONG GetKickstartLibs(struct App *app)
 {
 	LONG result = SERR_SYSTEM_TOO_OLD;
 
@@ -235,8 +250,7 @@ LONG GetKickstartLibs(struct App *app)
 							/* icon.library is optional */
 
 							IconBase = OpenLibrary("icon.library", 39);
-							Printf("IconBase @ $%08lx.\n", (LONG)IconBase);
-							result = OpenMyWindow(app);
+							result = GetUntanglePrefs(app);
 							if (IconBase) CloseLibrary(IconBase);
 							CloseLibrary(AslBase);
 						}
@@ -260,7 +274,7 @@ static STRPTR StartupErrorMessages[] = {
 	"Can't open game window.\n",
 	"Out of chip memory.\n",
 	"Can't create program menu (out of memory?).\n",
-	"Can't open asl.library v39+.\n",
+	"Can't open asl.library v39+.\n"
 };
 
 
