@@ -115,8 +115,6 @@ void PrecalculateLevel(struct GameLevel *glv)
 			}
 		}
 	}
-
-	Printf("intersections: %ld.\n", glv->InterCount);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -143,6 +141,4 @@ void UpdateIntersections(struct GameLevel *glv)
 			else UpdateIntersection(glv, glib->Index, glia->Index, test);
 		}
 	}
-	
-	Printf("intersections: %ld.\n", glv->InterCount);
 }

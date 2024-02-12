@@ -374,6 +374,7 @@ struct GameLevel* LoadLevel(struct Window *gwin, LONG level)
 		gl->Intersections = NULL;
 		gl->LevelSetName = NULL;
 		gl->LevelSetAuthor = NULL;
+		gl->MoveCount = 0;
 		err = LoadLevel2(gl, level);
 	}
 

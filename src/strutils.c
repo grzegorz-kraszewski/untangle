@@ -45,21 +45,20 @@ STRPTR VFmtNew(STRPTR fmt, APTR *args)
 	return dest;
 }
 
-#if 0
 
+STRPTR FmtNew(STRPTR fmt, APTR arg1, ...)
+{
+	APTR *_args = &arg1;
+	return VFmtNew(fmt, _args);
+}
+
+	
 ULONG StrLen(STRPTR s)
 {
 	STRPTR v = s;
 
 	while (*v) v++;
 	return (ULONG)(v - s);
-}
-
-
-STRPTR StrCopy(STRPTR s, STRPTR d)
-{
-	while (*d++ = *s++);
-	return (--d);
 }
 
 
@@ -71,6 +70,14 @@ STRPTR StrClone(STRPTR s)
 	return d;
 }
 
+
+STRPTR StrCopy(STRPTR s, STRPTR d)
+{
+	while (*d++ = *s++);
+	return (--d);
+}
+
+#if 0
 
 STRPTR VStrJoin(STRPTR d, STRPTR *strs, WORD count)
 {

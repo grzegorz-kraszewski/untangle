@@ -20,11 +20,11 @@ clean:
 
 # dependencies
 
-game.o: game.c main.h loader.h lscm.h strutils.h
+game.o: game.c main.h loader.h lscm.h strutils.h version.h
 loader.o: loader.c loader.h main.h strutils.h
 lscm.o: lscm.c lscm.h main.h
-main.o: main.c main.h menu.h strutils.h
+main.o: main.c main.h menu.h strutils.h version.h
 menu.o: menu.c main.h game.h
 savelevel.o: savelevel.c savelevel.h main.h loader.h
-start.o: start.c
+start.o: start.c version.h
 strutils.o: strutils.c strutils.h

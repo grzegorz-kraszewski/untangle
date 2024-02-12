@@ -6,6 +6,7 @@
 ULONG VFmtLen(STRPTR fmt, APTR *args);
 void VFmtPut(STRPTR dest, STRPTR fmt, APTR *args);
 STRPTR VFmtNew(STRPTR fmt, APTR *args);
+STRPTR FmtNew(STRPTR fmt, APTR arg1, ...);
 ULONG StrLen(STRPTR s);
 STRPTR StrCopy(STRPTR s, STRPTR d);
 STRPTR StrClone(STRPTR s);
