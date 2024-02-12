@@ -80,6 +80,47 @@ void DrawDots(struct RastPort *rp, struct App *app)
 
 /*---------------------------------------------------------------------------*/
 
+static void DrawInfoBar(struct App *app)
+{
+	struct RastPort *rp = app->Win->RPort;
+	WORD xs = app->Win->BorderLeft;
+	WORD xe = app->Win->Width - app->Win->BorderRight - 1;
+	WORD y = app->InfoBarY;
+	ULONG chars;
+	struct TextExtent te;
+
+	SetDrMd(rp, JAM1);
+	SetFont(rp, app->InfoFont);
+	SetAPen(rp, 0);
+	RectFill(rp, xs, y + 2, xe, app->Win->Height - app->Win->BorderBottom - 1);
+	SetAPen(rp, 1);
+	RectFill(rp, xs, y, xe, y);
+	chars = TextFit(rp, app->CurrentInfoText, StrLen(app->CurrentInfoText), &te,
+	NULL, 1, xe - xs - (app->DotSize & 0xFFFFFFFE), 32767);
+	Move(rp, app->InfoText.x, app->InfoText.y);
+	Text(rp, app->CurrentInfoText, chars); 
+	SetAPen(rp, 2);
+	RectFill(rp, xs, y + 1, xe, y + 1);
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void UpdateInfoText(struct App *app)
+{
+	struct RastPort *rp = app->Win->RPort;
+
+	if (app->CurrentInfoText) StrFree(app->CurrentInfoText);
+
+	if (app->Level)
+	{
+		app->CurrentInfoText = FmtNew("Intersections: %ld  Moves: %ld",
+		(APTR)app->Level->InterCount, (APTR)app->Level->MoveCount);
+	}
+}
+
+
+/*---------------------------------------------------------------------------*/
+
 void DrawGame(struct App *app)
 {
 	struct RastPort *rp = app->Win->RPort;
@@ -91,6 +132,8 @@ void DrawGame(struct App *app)
 		DrawLines(rp, &app->Level->LineList);
 		DrawDots(rp, app);
 	}
+
+	DrawInfoBar(app);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -98,12 +141,21 @@ void DrawGame(struct App *app)
 void ScaleGame(struct App *app)
 {
 	WORD margin = (app->DotSize >> 1) + 1;
+	WORD fonth = app->InfoFont->tf_YSize;
+	WORD infobarh = fonth + (fonth >> 3) + (fonth >> 3) + 2;
 
 	app->Field.MinX = app->Win->BorderLeft + margin;
 	app->Field.MinY = app->Win->BorderTop + margin;
 	app->Field.MaxX = app->Win->Width - app->Win->BorderRight - margin - 1;
-	app->Field.MaxY = app->Win->Height - app->Win->BorderBottom - margin - 1;
+	app->Field.MaxY = app->Win->Height - app->Win->BorderBottom - margin - infobarh - 1;
+
 	if (app->Level) TransformAllDots(&app->Level->DotList, &app->Field);
+
+	/* InfoBar */
+
+	app->InfoBarY = app->Field.MaxY + margin;
+	app->InfoText.x = app->Field.MinX;
+	app->InfoText.y = app->InfoBarY + 2 + (fonth >> 3) + app->InfoFont->tf_Baseline;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -128,7 +180,6 @@ static inline BOOL MaskHit(UWORD x, UWORD y, CONST UWORD *mask)
 
 static inline BOOL InsideBox(UWORD clkx, UWORD clky, UWORD dotx, UWORD doty, UWORD dotr)
 {
-	
 	if (clkx < dotx - dotr) return FALSE;
 	if (clkx > dotx + dotr) return FALSE;
 	if (clky < doty - dotr) return FALSE;
@@ -142,7 +193,7 @@ BOOL DotClicked(struct App *app, struct GameDot* dot, UWORD x, UWORD y)
 {
 	UWORD dotr = app->DotSize >> 1;
 
-	if (InsideBox(dot->Pixel.x, dot->Pixel.y, x, y, dotr >> 1))
+	if (InsideBox(dot->Pixel.x, dot->Pixel.y, x, y, dotr))
 	{
 		UWORD bbx = x + dotr - dot->Pixel.x;
 		UWORD bby = y + dotr - dot->Pixel.y;
@@ -163,7 +214,7 @@ struct GameDot* FindClickedDot(struct App *app, UWORD x, UWORD y)
 		if (DotClicked(app, gd, x, y)) return gd;
 	}
 
-	return NULL; 
+	return NULL;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -275,7 +326,7 @@ void GameClick(struct App *app, WORD x, WORD y)
 	{
 		if (clicked = FindClickedDot(app, x, y))
 		{
-			Printf("clicked dot %ld.\n", clicked - app->Level->DotStorage);
+			//Printf("clicked dot %ld.\n", clicked - app->Level->DotStorage);
 			MoveDraggedItems(app->Level, clicked);
 			EraseDraggedItems(app);
 			DrawGame(app);
@@ -306,7 +357,9 @@ void GameUnclick(struct App *app, WORD x, WORD y)
 	UpdateDragPosition(app->Level->DraggedDot, &app->Field, x, y);
 	InverseTransformDot(app->Level->DraggedDot, &app->Field);
 	UpdateIntersections(app->Level);
+	app->Level->MoveCount++;
 	MoveDraggedItemsBack(app->Level);
+	UpdateInfoText(app);
 	DrawGame(app);
 }
 
@@ -315,13 +368,14 @@ void GameUnclick(struct App *app, WORD x, WORD y)
 void GameDotDrag(struct App *app, WORD x, WORD y)
 {
 	DrawDraggedItems(app);
-	UpdateDragPosition(app->Level->DraggedDot, &app->Field, x, y);	
-	DrawDraggedItems(app);	
+	UpdateDragPosition(app->Level->DraggedDot, &app->Field, x, y);
+	DrawDraggedItems(app);
 }
 
 /*---------------------------------------------------------------------------*/
 /* - Updates screen bar with level set name and author.                      */
 /* - Updates window bar with level set name and number of level.             */
+/* - Updates bottom info bar.                                                */
 /*---------------------------------------------------------------------------*/
 
 void UpdateInfosAfterLevelLoad(struct App *app)
@@ -335,7 +389,7 @@ void UpdateInfosAfterLevelLoad(struct App *app)
 	if (title = VFmtNew("Untangle " VERSION ": %s by %s", args))
 	{
 		if (app->DynamicScreenTitle) StrFree(app->DynamicScreenTitle);
-		app->DynamicScreenTitle = title;		
+		app->DynamicScreenTitle = title;
 	}
 
 	args[0] = app->Level->LevelSetName;
@@ -344,10 +398,11 @@ void UpdateInfosAfterLevelLoad(struct App *app)
 	if (title = VFmtNew("Untangle: %s, Level %ld", args))
 	{
 		if (app->DynamicWindowTitle) StrFree(app->DynamicWindowTitle);
-		app->DynamicWindowTitle = title;		
+		app->DynamicWindowTitle = title;
 	}
 
 	SetWindowTitles(app->Win, app->DynamicWindowTitle, app->DynamicScreenTitle);
+	UpdateInfoText(app);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -358,7 +413,7 @@ void NewGame(struct App *app)
 	{
 		PrecalculateLevel(app->Level);
 		ScaleGame(app);
-		DrawGame(app);
 		UpdateInfosAfterLevelLoad(app);
+		DrawGame(app);
 	}
 }

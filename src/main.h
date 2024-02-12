@@ -80,6 +80,7 @@ struct GameLevel
 	LONG DotCount;                     /* total number of dots */
 	LONG LineCount;                    /* total number of lines */
 	LONG InterCount;                   /* current number of intersections, 0 = level solved */
+	LONG MoveCount;                    /* counter of moves made in a level */
 	STRPTR LevelSetName;
 	STRPTR LevelSetAuthor;
 };
@@ -91,6 +92,10 @@ struct App
 	UWORD *DotRaster;
 	struct BitMap *DotBitMap;
 	struct Rectangle Field;
+	Point InfoText;                    /* start pixel of info text */
+	WORD InfoBarY;                     /* vert position of the recessed line of info bar */
+	struct TextFont *InfoFont;
+	STRPTR CurrentInfoText;
 	struct GameLevel *Level;
 	LONG LevelNumber;                  /* counted from 1, ordinal number in a set */
 	STRPTR DynamicScreenTitle;

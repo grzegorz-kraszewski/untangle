@@ -6,7 +6,7 @@ struct Library
 	*IFFParseBase,
 	*AslBase,
 	*IconBase;
-	
+
 #include <proto/exec.h>
 #include <proto/intuition.h>
 #include <proto/dos.h>
@@ -43,7 +43,7 @@ void TheLoop(struct App *app)
 	portmask = 1 << app->Win->UserPort->mp_SigBit;
 
 	NewGame(app);  /* later it should load last played level from save */
-	
+
 	while (running)
 	{
 		signals = Wait(portmask | SIGBREAKF_CTRL_C);
@@ -69,7 +69,7 @@ void TheLoop(struct App *app)
 						ScaleGame(app);
 						DrawGame(app);
 					break;
-					
+
 					case IDCMP_MOUSEBUTTONS:
 						if (imsg->Code == SELECTDOWN) GameClick(app, imsg->MouseX, imsg->MouseY);
 						else if (imsg->Code == SELECTUP)
@@ -91,7 +91,7 @@ void TheLoop(struct App *app)
 							}
 						}
 					break;
-					
+
 					case IDCMP_MOUSEMOVE:
 						if (app->Win->Flags & WFLG_REPORTMOUSE)
 						{
@@ -99,12 +99,12 @@ void TheLoop(struct App *app)
 						}
 					break;
 				}
-				
+
 				ReplyMsg(&imsg->ExecMessage);
 			}
 		}
 	}
-	
+
 	return;
 }
 
@@ -166,7 +166,7 @@ static LONG PrepareDotImage(struct App *app)
 	LONG rassize, err = SERR_NO_CHIP_MEM;
 
 	rassize = app->DotSize * DOTRASTER_MODULO * sizeof(UWORD);
- 
+
 	if (app->DotRaster = AllocMem(rassize, MEMF_CHIP))
 	{
 		CopyMem(DotData[(app->DotSize >> 1) - 2], app->DotRaster, rassize);
@@ -194,17 +194,33 @@ static LONG PrepareDotImage(struct App *app)
 	return err;
 }
 
+/*---------------------------------------------------------------------------*/
+
+static LONG GetScreenFont(struct App *app)
+{
+	LONG err = 430;
+
+	if (app->InfoFont = OpenFont(app->Win->WScreen->Font))
+	{
+		err = PrepareDotImage(app);
+		CloseFont(app->InfoFont);
+	}
+
+	return err;
+}
+
+/*---------------------------------------------------------------------------*/
 
 static LONG OpenMyWindow(struct App *app)
 {
 	LONG err = SERR_NO_WINDOW;
-	 
+ 
 	wintags[10].ti_Data = (LONG)DefWindowTitle;
 	wintags[11].ti_Data = (LONG)DefScreenTitle;
 
 	if (app->Win = OpenWindowTagList(NULL, wintags))
 	{
-		err = PrepareDotImage(app);
+		err = GetScreenFont(app);
 		CloseWindow(app->Win);
 	}
 
@@ -227,19 +243,19 @@ static LONG GetUntanglePrefs(struct App *app, struct WBStartup *wbmsg)
 			LONG dotsize;
 			STRPTR value;
 
-			value = FindToolType((CONST_STRPTR*)dobj->do_ToolTypes, "DOTSIZE");
+			value = FindToolType((STRPTR*)dobj->do_ToolTypes, "DOTSIZE");
 
 			if (value)
 			{
 				StrToLong(value, &dotsize);
 				if ((dotsize >= 1) && (dotsize <= 6)) app->DotSize = dotsize * 2 + 3;
 			}
-			
+
 			FreeDiskObject(dobj);
 		}
 
 		CurrentDir(olddir);
-	}	
+	}
 
 	return OpenMyWindow(app);
 }
@@ -278,14 +294,14 @@ static LONG GetKickstartLibs(struct App *app, struct WBStartup *wbmsg)
 					CloseLibrary(GadToolsBase);
 				}
 				CloseLibrary(IntuitionBase);
-			}			
+			}
 			CloseLibrary(LayersBase);
 		}
 		CloseLibrary(GfxBase);
 	}
 
 	return result;
-} 
+}
 
 
 static STRPTR StartupErrorMessages[] = {
@@ -303,7 +319,7 @@ static void ReportStartupError(err)
 	/* In case of fail to open Kickstart libraries (error code 1), */
 	/* the best I can do is just a silent quit.                    */
 	/*-------------------------------------------------------------*/
-	 
+ 
 	if (err > 1) PutStr(StartupErrorMessages[err - 2]);
 	return;
 }
@@ -319,13 +335,15 @@ ULONG Main(struct WBStartup *wbmsg)
 	app.DynamicScreenTitle = NULL;
 	app.DynamicWindowTitle = NULL;
 	app.DotSize = 9;                     /* default if icon toolype does not exist / can't be read */
-	
+	app.CurrentInfoText = StrClone("");
+
 	if (error = GetKickstartLibs(&app, wbmsg))
 	{
 		ReportStartupError(error);
 		result = RETURN_FAIL;
 	}
 
+	if (app.CurrentInfoText) StrFree(app.CurrentInfoText);
 	if (app.DynamicScreenTitle) StrFree(app.DynamicScreenTitle);
 	if (app.DynamicWindowTitle) StrFree(app.DynamicWindowTitle);
 
