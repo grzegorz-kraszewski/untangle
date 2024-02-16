@@ -100,7 +100,8 @@ struct App
 	LONG LevelNumber;                  /* counted from 1, ordinal number in a set */
 	STRPTR DynamicScreenTitle;
 	STRPTR DynamicWindowTitle;
-	WORD DotSize;                      /* pixels [ 5, 7, 9, 11, 13, 15 ] */
+	WORD DotWidth;                     /* pixels */
+	WORD DotHeight;                    /* pixels */
 };
 
 #endif  /* UNTANGLE_MAIN_H */
