@@ -8,6 +8,7 @@
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 #include <proto/dos.h>
+#include <proto/timer.h>
 
 #include <intuition/intuition.h>
 
@@ -87,11 +88,10 @@ static void DrawInfoBar(struct App *app)
 	ULONG chars;
 	struct TextExtent te;
 
-	SetDrMd(rp, JAM1);
-	SetFont(rp, app->InfoFont);
-	SetAPen(rp, 0);
-	RectFill(rp, xs, y + 2, xe, app->Win->Height - app->Win->BorderBottom - 1);
+	SetDrMd(rp, JAM2);
 	SetAPen(rp, 1);
+	SetBPen(rp, 0);
+	SetFont(rp, app->InfoFont);
 	RectFill(rp, xs, y, xe, y);
 	chars = TextFit(rp, app->CurrentInfoText, StrLen(app->CurrentInfoText), &te,
 	NULL, 1, xe - xs - (app->DotWidth & 0xFFFFFFFE), 32767);
@@ -111,8 +111,8 @@ static void UpdateInfoText(struct App *app)
 
 	if (app->Level)
 	{
-		app->CurrentInfoText = FmtNew("Intersections: %ld  Moves: %ld",
-		(APTR)app->Level->InterCount, (APTR)app->Level->MoveCount);
+		app->CurrentInfoText = FmtNew("Intersections: %ld  Moves: %ld ",
+		app->Level->InterCount, app->Level->MoveCount);
 	}
 }
 
@@ -383,21 +383,16 @@ void GameDotDrag(struct App *app, WORD x, WORD y)
 void UpdateInfosAfterLevelLoad(struct App *app)
 {
 	STRPTR title;
-	APTR args[2];
 
-	args[0] = app->Level->LevelSetName;
-	args[1] = app->Level->LevelSetAuthor;
-
-	if (title = VFmtNew("Untangle " VERSION ": %s by %s", args))
+	if (title = FmtNew("Untangle " VERSION ": %s by %s", (LONG)app->Level->LevelSetName,
+	(LONG)app->Level->LevelSetAuthor))
 	{
 		if (app->DynamicScreenTitle) StrFree(app->DynamicScreenTitle);
 		app->DynamicScreenTitle = title;
 	}
 
-	args[0] = app->Level->LevelSetName;
-	args[1] = (APTR)app->LevelNumber;
-
-	if (title = VFmtNew("Untangle: %s, Level %ld", args))
+	if (title = FmtNew("Untangle: %s, Level %ld", (LONG)app->Level->LevelSetName,
+	app->LevelNumber))
 	{
 		if (app->DynamicWindowTitle) StrFree(app->DynamicWindowTitle);
 		app->DynamicWindowTitle = title;
@@ -405,6 +400,91 @@ void UpdateInfosAfterLevelLoad(struct App *app)
 
 	SetWindowTitles(app->Win, app->DynamicWindowTitle, app->DynamicScreenTitle);
 	UpdateInfoText(app);
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void PrintLevelTime(struct App *app)
+{
+	static UBYTE tbuf[64];
+	struct RastPort *rp = app->Win->RPort;
+
+	FmtPut(tbuf, "Time: %ld:%02ld", app->LevelTime.Min, app->LevelTime.Sec);
+	SetDrMd(rp, JAM2);
+	SetAPen(rp, 1);
+	SetBPen(rp, 0);
+	Move(rp, app->InfoText.x + 250, app->InfoText.y);
+	Text(rp, tbuf, StrLen(tbuf));
+}
+
+
+
+/*
+static void DrawInfoBar(struct App *app)
+{
+	struct RastPort *rp = app->Win->RPort;
+	WORD xs = app->Win->BorderLeft;
+	WORD xe = app->Win->Width - app->Win->BorderRight - 1;
+	WORD y = app->InfoBarY;
+	ULONG chars;
+	struct TextExtent te;
+
+	SetDrMd(rp, JAM1);
+	SetFont(rp, app->InfoFont);
+	SetAPen(rp, 0);
+	RectFill(rp, xs, y + 2, xe, app->Win->Height - app->Win->BorderBottom - 1);
+	SetAPen(rp, 1);
+	RectFill(rp, xs, y, xe, y);
+	chars = TextFit(rp, app->CurrentInfoText, StrLen(app->CurrentInfoText), &te,
+	NULL, 1, xe - xs - (app->DotWidth & 0xFFFFFFFE), 32767);
+	Move(rp, app->InfoText.x, app->InfoText.y);
+	Text(rp, app->CurrentInfoText, chars); 
+	SetAPen(rp, 2);
+	RectFill(rp, xs, y + 1, xe, y + 1);
+}
+
+*/
+/*---------------------------------------------------------------------------*/
+
+void StopTimer(struct App *app)
+{
+	struct timeval t;
+
+	AbortIO(&app->TimerReq->tr_node);
+	WaitIO(&app->TimerReq->tr_node);
+	GetSysTime(&t);
+	SubTime(&t, &app->LevelStart);
+	Printf("level time: %ld.%06ld s.\n", t.tv_secs, t.tv_micro);
+}
+
+/*---------------------------------------------------------------------------*/
+
+void PushNextSecond(struct App *app)
+{
+	PrintLevelTime(app);
+	app->LevelTime.Sec++;
+
+	if (app->LevelTime.Sec == 60)
+	{
+		app->LevelTime.Sec = 0;
+		app->LevelTime.Min++;
+	}
+
+	app->NextSecond.tv_secs++;
+	app->TimerReq->tr_node.io_Command = TR_ADDREQUEST;
+	app->TimerReq->tr_time = app->NextSecond;
+	SendIO(&app->TimerReq->tr_node);
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void StartTimer(struct App *app)
+{
+	app->LevelTime.Sec = 0;
+	app->LevelTime.Min = 0;
+	GetSysTime(&app->LevelStart);
+	app->NextSecond = app->LevelStart;
+	PushNextSecond(app);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -417,5 +497,6 @@ void NewGame(struct App *app)
 		ScaleGame(app);
 		UpdateInfosAfterLevelLoad(app);
 		DrawGame(app);
+		StartTimer(app);
 	}
 }

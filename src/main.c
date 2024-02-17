@@ -5,7 +5,8 @@ struct Library
 	*GadToolsBase,
 	*IFFParseBase,
 	*AslBase,
-	*IconBase;
+	*IconBase,
+	*TimerBase;
 
 #include <proto/exec.h>
 #include <proto/intuition.h>
@@ -38,15 +39,16 @@ void TheLoop(struct App *app)
 {
 	BOOL running = TRUE;
 	struct IntuiMessage *imsg;
-	ULONG signals, portmask;
+	ULONG signals, portmask, timermask;
 
 	portmask = 1 << app->Win->UserPort->mp_SigBit;
+	timermask = 1 << app->TimerPort->mp_SigBit;
 
 	NewGame(app);  /* later it should load last played level from save */
 
 	while (running)
 	{
-		signals = Wait(portmask | SIGBREAKF_CTRL_C);
+		signals = Wait(portmask | timermask | SIGBREAKF_CTRL_C);
 
 		if (signals & SIGBREAKF_CTRL_C) running = FALSE;
 
@@ -80,6 +82,7 @@ void TheLoop(struct App *app)
 
 						 		if (app->Level->InterCount == 0)
 						 		{
+									StopTimer(app);
 									DisplayBeep(app->Win->WScreen);
 									Delay(50);
 									EraseGame(app);
@@ -102,6 +105,12 @@ void TheLoop(struct App *app)
 
 				ReplyMsg(&imsg->ExecMessage);
 			}
+		}
+
+		if (signals & timermask)
+		{
+			WaitIO(&app->TimerReq->tr_node);
+			PushNextSecond(app);
 		}
 	}
 
@@ -282,6 +291,34 @@ static LONG OpenMyWindow(struct App *app)
 
 /*---------------------------------------------------------------------------*/
 
+static LONG GetTimer(struct App *app)
+{
+	LONG err = SERR_TIMER;
+
+	if (app->TimerPort = CreateMsgPort())
+	{
+		if (app->TimerReq = (struct timerequest*)CreateIORequest(app->TimerPort,
+		sizeof(struct timerequest)))
+		{
+			if (OpenDevice("timer.device", UNIT_WAITUNTIL, &app->TimerReq->tr_node, 0) == 0)
+			{
+				TimerBase = &app->TimerReq->tr_node.io_Device->dd_Library;
+				err = OpenMyWindow(app);
+				AbortIO(&app->TimerReq->tr_node);
+				WaitIO(&app->TimerReq->tr_node);
+				CloseDevice(&app->TimerReq->tr_node);
+			}
+
+			DeleteIORequest(&app->TimerReq->tr_node);
+		}
+
+		DeleteMsgPort(app->TimerPort);
+	}
+	return err;
+}
+
+/*---------------------------------------------------------------------------*/
+
 static LONG GetUntanglePrefs(struct App *app, struct WBStartup *wbmsg)
 {
 	if (wbmsg)     /* if launched from CLI sorry, no prefs */
@@ -311,7 +348,7 @@ static LONG GetUntanglePrefs(struct App *app, struct WBStartup *wbmsg)
 		CurrentDir(olddir);
 	}
 
-	return OpenMyWindow(app);
+	return GetTimer(app);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -363,7 +400,8 @@ static STRPTR StartupErrorMessages[] = {
 	"Can't open game window.\n",
 	"Out of chip memory.\n",
 	"Can't create program menu (out of memory?).\n",
-	"Can't open asl.library v39+.\n"
+	"Can't open asl.library v39+.\n",
+	"Can't open timer.device.\n"
 };
 
 
