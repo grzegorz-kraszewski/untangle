@@ -113,15 +113,15 @@ void TheLoop(struct App *app)
 BOOL RectVertPixels(struct App *app)
 {
 	struct DrawInfo *dri;
-	BOOL result = FALSE;
+	WORD pcf;
 
 	if (dri = GetScreenDrawInfo(app->Win->WScreen))
 	{
-		if (div16(dri->dri_Resolution.Y << 3, dri->dri_Resolution.X) > 12) result = TRUE;
+		pcf = div16(dri->dri_Resolution.Y << 3, dri->dri_Resolution.X);
 		FreeScreenDrawInfo(app->Win->WScreen, dri);
 	}
 
-	return result;
+	return (pcf > 12);
 }
 
 /*---------------------------------------------------------------------------*/
