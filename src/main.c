@@ -38,6 +38,7 @@ void InitList(struct MinList *list)
 void TheLoop(struct App *app)
 {
 	BOOL running = TRUE;
+	BOOL redraw_timer = TRUE;
 	struct IntuiMessage *imsg;
 	ULONG signals, portmask, timermask;
 
@@ -66,7 +67,12 @@ void TheLoop(struct App *app)
 						running = HandleMenu(app, imsg->Code);
 					break;
 
+					case IDCMP_SIZEVERIFY:
+						redraw_timer = FALSE;   /* do not draw while window is resized */
+					break;
+
 					case IDCMP_NEWSIZE:
+						redraw_timer = TRUE;
 						EraseGame(app);
 						ScaleGame(app);
 						DrawGame(app);
@@ -110,7 +116,7 @@ void TheLoop(struct App *app)
 		if (signals & timermask)
 		{
 			WaitIO(&app->TimerReq->tr_node);
-			PushNextSecond(app);
+			PushNextSecond(app, redraw_timer);
 		}
 	}
 
@@ -253,6 +259,18 @@ static LONG GetScreenFont(struct App *app)
 }
 
 /*---------------------------------------------------------------------------*/
+/* Minimum window width is determined by pixel length of text in the info    */
+/* bar. 
+/*---------------------------------------------------------------------------*/
+
+LONG CalculateMinWidth(struct App *app, struct Screen *wb)
+{
+	STRPTR sstr = "Intersections: 0000  Moves: 0000  Time: 000:00";
+
+	return (TextLength(&wb->RastPort, sstr, StrLen(sstr)) + (app->DotWidth & ~1));
+}
+
+/*---------------------------------------------------------------------------*/
 
 struct TagItem wintags[] = {
 	{ WA_Width, 400 },
@@ -266,8 +284,9 @@ struct TagItem wintags[] = {
 	{ WA_DepthGadget, TRUE },
 	{ WA_SizeGadget, TRUE },
 	{ WA_Title, 0 /* DefWindowTitle */ },
-	{ WA_ScreenTitle, 0, /* DefScreenTitle */ },
-	{ WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_MENUPICK | IDCMP_NEWSIZE | IDCMP_MOUSEBUTTONS | IDCMP_MOUSEMOVE },
+	{ WA_ScreenTitle, 0 /* DefScreenTitle */ },
+	{ WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_MENUPICK | IDCMP_NEWSIZE | IDCMP_MOUSEBUTTONS
+	  | IDCMP_MOUSEMOVE | IDCMP_SIZEVERIFY },
 	{ WA_NewLookMenus, TRUE },
 	{ WA_Activate, TRUE },
 	{ TAG_END, 0 }
@@ -276,14 +295,23 @@ struct TagItem wintags[] = {
 static LONG OpenMyWindow(struct App *app)
 {
 	LONG err = SERR_NO_WINDOW;
- 
+	struct Screen *wb;
+
 	wintags[10].ti_Data = (LONG)DefWindowTitle;
 	wintags[11].ti_Data = (LONG)DefScreenTitle;
 
-	if (app->Win = OpenWindowTagList(NULL, wintags))
+	if (wb = LockPubScreen(NULL))
 	{
-		err = GetScreenFont(app);
-		CloseWindow(app->Win);
+		wintags[2].ti_Data = CalculateMinWidth(app, wb);
+		Printf("min_width = %ld.\n", wintags[2].ti_Data);
+		app->Win = OpenWindowTagList(NULL, wintags);
+		UnlockPubScreen(NULL, wb);
+
+		if (app->Win)
+		{
+			err = GetScreenFont(app);
+			CloseWindow(app->Win);
+		}
 	}
 
 	return err;

@@ -7,4 +7,4 @@ void GameClick(struct App *app, WORD x, WORD y);
 void GameUnclick(struct App *app, WORD x, WORD y);
 void GameDotDrag(struct App *app, WORD x, WORD y);
 void StopTimer(struct App *app);
-void PushNextSecond(struct App *app);
+void PushNextSecond(struct App *app, BOOL redraw);

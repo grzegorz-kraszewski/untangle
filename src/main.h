@@ -101,6 +101,7 @@ struct App
 	struct BitMap *DotBitMap;
 	struct Rectangle Field;
 	Point InfoText;                    /* start pixel of info text */
+	WORD TimeTextX;                    /* start pixel of time text */
 	WORD InfoBarY;                     /* vert position of the recessed line of info bar */
 	struct TextFont *InfoFont;
 	STRPTR CurrentInfoText;

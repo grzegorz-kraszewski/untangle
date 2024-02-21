@@ -12,6 +12,8 @@
 
 #include <intuition/intuition.h>
 
+static void PrintLevelInfo(struct App *app);
+
 /*---------------------------------------------------------------------------*/
 /* Game levels are generated in virtual coordinate system: a square of 32768 */
 /* x 32768 units, zero in upper left corner. At start and after every window */
@@ -88,34 +90,13 @@ static void DrawInfoBar(struct App *app)
 	ULONG chars;
 	struct TextExtent te;
 
-	SetDrMd(rp, JAM2);
 	SetAPen(rp, 1);
-	SetBPen(rp, 0);
 	SetFont(rp, app->InfoFont);
 	RectFill(rp, xs, y, xe, y);
-	chars = TextFit(rp, app->CurrentInfoText, StrLen(app->CurrentInfoText), &te,
-	NULL, 1, xe - xs - (app->DotWidth & 0xFFFFFFFE), 32767);
-	Move(rp, app->InfoText.x, app->InfoText.y);
-	Text(rp, app->CurrentInfoText, chars); 
 	SetAPen(rp, 2);
 	RectFill(rp, xs, y + 1, xe, y + 1);
+	PrintLevelInfo(app);
 }
-
-/*---------------------------------------------------------------------------*/
-
-static void UpdateInfoText(struct App *app)
-{
-	struct RastPort *rp = app->Win->RPort;
-
-	if (app->CurrentInfoText) StrFree(app->CurrentInfoText);
-
-	if (app->Level)
-	{
-		app->CurrentInfoText = FmtNew("Intersections: %ld  Moves: %ld ",
-		app->Level->InterCount, app->Level->MoveCount);
-	}
-}
-
 
 /*---------------------------------------------------------------------------*/
 
@@ -328,7 +309,6 @@ void GameClick(struct App *app, WORD x, WORD y)
 	{
 		if (clicked = FindClickedDot(app, x, y))
 		{
-			//Printf("clicked dot %ld.\n", clicked - app->Level->DotStorage);
 			MoveDraggedItems(app->Level, clicked);
 			EraseDraggedItems(app);
 			DrawGame(app);
@@ -361,7 +341,7 @@ void GameUnclick(struct App *app, WORD x, WORD y)
 	UpdateIntersections(app->Level);
 	app->Level->MoveCount++;
 	MoveDraggedItemsBack(app->Level);
-	UpdateInfoText(app);
+	PrintLevelInfo(app);
 	DrawGame(app);
 }
 
@@ -399,69 +379,61 @@ void UpdateInfosAfterLevelLoad(struct App *app)
 	}
 
 	SetWindowTitles(app->Win, app->DynamicWindowTitle, app->DynamicScreenTitle);
-	UpdateInfoText(app);
 }
 
 /*---------------------------------------------------------------------------*/
 
 static void PrintLevelTime(struct App *app)
 {
-	static UBYTE tbuf[64];
+	static UBYTE tbuf[32];
 	struct RastPort *rp = app->Win->RPort;
 
-	FmtPut(tbuf, "Time: %ld:%02ld", app->LevelTime.Min, app->LevelTime.Sec);
+	FmtPut(tbuf, "%ld:%02ld", app->LevelTime.Min, app->LevelTime.Sec);
 	SetDrMd(rp, JAM2);
 	SetAPen(rp, 1);
 	SetBPen(rp, 0);
-	Move(rp, app->InfoText.x + 250, app->InfoText.y);
+	Move(rp, app->TimeTextX, app->InfoText.y);
 	Text(rp, tbuf, StrLen(tbuf));
+	SetAPen(rp, 0);
+	RectFill(rp, rp->cp_x, app->InfoText.y - rp->TxBaseline, app->Field.MaxX,
+		app->InfoText.y - rp->TxBaseline + rp->TxHeight);
 }
 
+/*---------------------------------------------------------------------------*/
 
-
-/*
-static void DrawInfoBar(struct App *app)
+static void PrintLevelInfo(struct App *app)
 {
 	struct RastPort *rp = app->Win->RPort;
-	WORD xs = app->Win->BorderLeft;
-	WORD xe = app->Win->Width - app->Win->BorderRight - 1;
-	WORD y = app->InfoBarY;
-	ULONG chars;
-	struct TextExtent te;
 
-	SetDrMd(rp, JAM1);
-	SetFont(rp, app->InfoFont);
-	SetAPen(rp, 0);
-	RectFill(rp, xs, y + 2, xe, app->Win->Height - app->Win->BorderBottom - 1);
-	SetAPen(rp, 1);
-	RectFill(rp, xs, y, xe, y);
-	chars = TextFit(rp, app->CurrentInfoText, StrLen(app->CurrentInfoText), &te,
-	NULL, 1, xe - xs - (app->DotWidth & 0xFFFFFFFE), 32767);
-	Move(rp, app->InfoText.x, app->InfoText.y);
-	Text(rp, app->CurrentInfoText, chars); 
-	SetAPen(rp, 2);
-	RectFill(rp, xs, y + 1, xe, y + 1);
+	if (app->CurrentInfoText) StrFree(app->CurrentInfoText);
+
+	if (app->Level)
+	{
+		app->CurrentInfoText = FmtNew("Intersections: %ld  Moves: %ld  Time: ",
+			app->Level->InterCount, app->Level->MoveCount);
+		SetDrMd(rp, JAM2);
+		SetAPen(rp, 1);
+		SetBPen(rp, 0);
+		Move(rp, app->InfoText.x, app->InfoText.y);
+		Text(rp, app->CurrentInfoText, StrLen(app->CurrentInfoText));
+		app->TimeTextX = rp->cp_x;
+		PrintLevelTime(app);
+	}
 }
 
-*/
 /*---------------------------------------------------------------------------*/
 
 void StopTimer(struct App *app)
 {
-	struct timeval t;
-
 	AbortIO(&app->TimerReq->tr_node);
 	WaitIO(&app->TimerReq->tr_node);
-	GetSysTime(&t);
-	SubTime(&t, &app->LevelStart);
-	Printf("level time: %ld.%06ld s.\n", t.tv_secs, t.tv_micro);
 }
 
 /*---------------------------------------------------------------------------*/
 
-void PushNextSecond(struct App *app)
+void PushNextSecond(struct App *app, BOOL redraw)
 {
-	PrintLevelTime(app);
+	if (redraw) PrintLevelTime(app);
 	app->LevelTime.Sec++;
 
 	if (app->LevelTime.Sec == 60)
@@ -484,13 +456,16 @@ static void StartTimer(struct App *app)
 	app->LevelTime.Min = 0;
 	GetSysTime(&app->LevelStart);
 	app->NextSecond = app->LevelStart;
-	PushNextSecond(app);
+	PushNextSecond(app, TRUE);
 }
 
 /*---------------------------------------------------------------------------*/
 
 void NewGame(struct App *app)
 {
+	app->LevelTime.Min = 0;
+	app->LevelTime.Sec = 0;
+
 	if (app->Level = LoadLevel(app->Win, app->LevelNumber))
 	{
 		PrecalculateLevel(app->Level);
