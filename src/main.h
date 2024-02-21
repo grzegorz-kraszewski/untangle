@@ -4,6 +4,7 @@
 #include <exec/types.h>
 #include <exec/lists.h>
 #include <graphics/gfx.h>
+#include <devices/timer.h>
 
 #define REG(arg, reg) arg __asm(reg)
 
@@ -38,9 +39,8 @@ extern struct Library
 	*GadToolsBase,
 	*IFFParseBase,
 	*AslBase,
-	*IconBase;
-
-//#define DOT_SIZE 7
+	*IconBase,
+	*TimerBase;
 
 /*---------------------*/
 /* startup error codes */
@@ -52,6 +52,8 @@ extern struct Library
 #define SERR_NO_CHIP_MEM                4
 #define SERR_MENU_LAYOUT                5
 #define SERR_NO_ASL                     6
+#define SERR_TIMER                      7
+
 
 struct GameDot
 {
@@ -85,6 +87,12 @@ struct GameLevel
 	STRPTR LevelSetAuthor;
 };
 
+struct GameTime
+{
+	ULONG Min;
+	UWORD Sec;
+};
+
 struct App
 {
 	struct Window *Win;
@@ -93,6 +101,7 @@ struct App
 	struct BitMap *DotBitMap;
 	struct Rectangle Field;
 	Point InfoText;                    /* start pixel of info text */
+	WORD TimeTextX;                    /* start pixel of time text */
 	WORD InfoBarY;                     /* vert position of the recessed line of info bar */
 	struct TextFont *InfoFont;
 	STRPTR CurrentInfoText;
@@ -100,7 +109,13 @@ struct App
 	LONG LevelNumber;                  /* counted from 1, ordinal number in a set */
 	STRPTR DynamicScreenTitle;
 	STRPTR DynamicWindowTitle;
-	WORD DotSize;                      /* pixels [ 5, 7, 9, 11, 13, 15 ] */
+	WORD DotWidth;                     /* pixels */
+	WORD DotHeight;                    /* pixels */
+	struct MsgPort *TimerPort;
+	struct timerequest *TimerReq;
+	struct GameTime LevelTime;
+	struct timeval LevelStart;
+	struct timeval NextSecond;
 };
 
 #endif  /* UNTANGLE_MAIN_H */

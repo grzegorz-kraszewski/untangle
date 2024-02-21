@@ -19,7 +19,7 @@ static void ProcCountChars(void)
 }
 
 
-ULONG VFmtLen(STRPTR fmt, APTR *args)
+ULONG VFmtLen(STRPTR fmt, LONG *args)
 {
 	ULONG len = 0;
 
@@ -28,13 +28,20 @@ ULONG VFmtLen(STRPTR fmt, APTR *args)
 }
 
 
-void VFmtPut(STRPTR dest, STRPTR fmt, APTR *args)
+void VFmtPut(STRPTR dest, STRPTR fmt, LONG *args)
 {
 	RawDoFmt(fmt, args, ProcPutChar, dest);
 }
 
 
-STRPTR VFmtNew(STRPTR fmt, APTR *args)
+void FmtPut(STRPTR dest, STRPTR fmt, LONG arg1, ...)
+{
+	LONG *_args = &arg1;
+	VFmtPut(dest, fmt, _args);
+}
+
+
+STRPTR VFmtNew(STRPTR fmt, LONG *args)
 {
 	ULONG len;
 	STRPTR dest;
@@ -46,9 +53,9 @@ STRPTR VFmtNew(STRPTR fmt, APTR *args)
 }
 
 
-STRPTR FmtNew(STRPTR fmt, APTR arg1, ...)
+STRPTR FmtNew(STRPTR fmt, LONG arg1, ...)
 {
-	APTR *_args = &arg1;
+	LONG *_args = &arg1;
 	return VFmtNew(fmt, _args);
 }
 

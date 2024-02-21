@@ -8,11 +8,11 @@
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 #include <proto/dos.h>
+#include <proto/timer.h>
 
 #include <intuition/intuition.h>
 
-//#define MARGIN (DOT_SIZE / 2 + 1)
-//#define DOT_RADIUS (DOT_SIZE / 2)
+static void PrintLevelInfo(struct App *app);
 
 /*---------------------------------------------------------------------------*/
 /* Game levels are generated in virtual coordinate system: a square of 32768 */
@@ -68,13 +68,14 @@ void DrawLines(struct RastPort *rp, struct MinList *lines)
 
 void DrawDots(struct RastPort *rp, struct App *app)
 {
-	WORD dotradius = app->DotSize >> 1;
+	WORD dotradius_x = app->DotWidth >> 1;
+	WORD dotradius_y = app->DotHeight >> 1;
 	struct GameDot *gd;
 
 	ForEachFwd(&app->Level->DotList, struct GameDot, gd)
 	{
-		BltMaskBitMapRastPort(app->DotBitMap, 0, 0, rp, gd->Pixel.x - dotradius,
-			gd->Pixel.y - dotradius, app->DotSize, app->DotSize, 0xE0, (APTR)app->DotRaster);
+		BltMaskBitMapRastPort(app->DotBitMap, 0, 0, rp, gd->Pixel.x - dotradius_x,
+			gd->Pixel.y - dotradius_y, app->DotWidth, app->DotHeight, 0xE0, (APTR)app->DotRaster);
 	}
 }
 
@@ -89,35 +90,13 @@ static void DrawInfoBar(struct App *app)
 	ULONG chars;
 	struct TextExtent te;
 
-	SetDrMd(rp, JAM1);
-	SetFont(rp, app->InfoFont);
-	SetAPen(rp, 0);
-	RectFill(rp, xs, y + 2, xe, app->Win->Height - app->Win->BorderBottom - 1);
 	SetAPen(rp, 1);
+	SetFont(rp, app->InfoFont);
 	RectFill(rp, xs, y, xe, y);
-	chars = TextFit(rp, app->CurrentInfoText, StrLen(app->CurrentInfoText), &te,
-	NULL, 1, xe - xs - (app->DotSize & 0xFFFFFFFE), 32767);
-	Move(rp, app->InfoText.x, app->InfoText.y);
-	Text(rp, app->CurrentInfoText, chars); 
 	SetAPen(rp, 2);
 	RectFill(rp, xs, y + 1, xe, y + 1);
+	PrintLevelInfo(app);
 }
-
-/*---------------------------------------------------------------------------*/
-
-static void UpdateInfoText(struct App *app)
-{
-	struct RastPort *rp = app->Win->RPort;
-
-	if (app->CurrentInfoText) StrFree(app->CurrentInfoText);
-
-	if (app->Level)
-	{
-		app->CurrentInfoText = FmtNew("Intersections: %ld  Moves: %ld",
-		(APTR)app->Level->InterCount, (APTR)app->Level->MoveCount);
-	}
-}
-
 
 /*---------------------------------------------------------------------------*/
 
@@ -140,20 +119,21 @@ void DrawGame(struct App *app)
 
 void ScaleGame(struct App *app)
 {
-	WORD margin = (app->DotSize >> 1) + 1;
+	WORD margin_x = (app->DotWidth >> 1) + 1;
+	WORD margin_y = (app->DotHeight >> 1) + 1;
 	WORD fonth = app->InfoFont->tf_YSize;
 	WORD infobarh = fonth + (fonth >> 3) + (fonth >> 3) + 2;
 
-	app->Field.MinX = app->Win->BorderLeft + margin;
-	app->Field.MinY = app->Win->BorderTop + margin;
-	app->Field.MaxX = app->Win->Width - app->Win->BorderRight - margin - 1;
-	app->Field.MaxY = app->Win->Height - app->Win->BorderBottom - margin - infobarh - 1;
+	app->Field.MinX = app->Win->BorderLeft + margin_x;
+	app->Field.MinY = app->Win->BorderTop + margin_y;
+	app->Field.MaxX = app->Win->Width - app->Win->BorderRight - margin_x - 1;
+	app->Field.MaxY = app->Win->Height - app->Win->BorderBottom - margin_y - infobarh - 1;
 
 	if (app->Level) TransformAllDots(&app->Level->DotList, &app->Field);
 
 	/* InfoBar */
 
-	app->InfoBarY = app->Field.MaxY + margin;
+	app->InfoBarY = app->Field.MaxY + margin_y;
 	app->InfoText.x = app->Field.MinX;
 	app->InfoText.y = app->InfoBarY + 2 + (fonth >> 3) + app->InfoFont->tf_Baseline;
 }
@@ -178,12 +158,13 @@ static inline BOOL MaskHit(UWORD x, UWORD y, CONST UWORD *mask)
 
 /*---------------------------------------------------------------------------*/
 
-static inline BOOL InsideBox(UWORD clkx, UWORD clky, UWORD dotx, UWORD doty, UWORD dotr)
+static inline BOOL InsideBox(UWORD clkx, UWORD clky, UWORD dotx, UWORD doty,
+	UWORD dotrx, UWORD dotry)
 {
-	if (clkx < dotx - dotr) return FALSE;
-	if (clkx > dotx + dotr) return FALSE;
-	if (clky < doty - dotr) return FALSE;
-	if (clky > doty + dotr) return FALSE;
+	if (clkx < dotx - dotrx) return FALSE;
+	if (clkx > dotx + dotrx) return FALSE;
+	if (clky < doty - dotry) return FALSE;
+	if (clky > doty + dotry) return FALSE;
 	return TRUE;
 }
 
@@ -191,12 +172,13 @@ static inline BOOL InsideBox(UWORD clkx, UWORD clky, UWORD dotx, UWORD doty, UWO
 
 BOOL DotClicked(struct App *app, struct GameDot* dot, UWORD x, UWORD y)
 {
-	UWORD dotr = app->DotSize >> 1;
+	UWORD dotrx = app->DotWidth >> 1;
+	UWORD dotry = app->DotHeight >> 1;
 
-	if (InsideBox(dot->Pixel.x, dot->Pixel.y, x, y, dotr))
+	if (InsideBox(dot->Pixel.x, dot->Pixel.y, x, y, dotrx, dotry))
 	{
-		UWORD bbx = x + dotr - dot->Pixel.x;
-		UWORD bby = y + dotr - dot->Pixel.y;
+		UWORD bbx = x + dotrx - dot->Pixel.x;
+		UWORD bby = y + dotry - dot->Pixel.y;
 		if (MaskHit(bbx, bby, app->DotRaster)) return TRUE;
 	}
 
@@ -287,10 +269,11 @@ void MoveDraggedItemsBack(struct GameLevel *glv)
 
 void EraseDot(struct App *app, struct GameDot *gd)
 {
-	WORD dotr = app->DotSize >> 1;
+	WORD dotrx = app->DotWidth >> 1;
+	WORD dotry = app->DotHeight >> 1;
 
-	BltTemplate((CONST PLANEPTR)app->DotRaster, 0, 2, app->Win->RPort, gd->Pixel.x - dotr,
-	 gd->Pixel.y - dotr, app->DotSize, app->DotSize);
+	BltTemplate((CONST PLANEPTR)app->DotRaster, 0, 2, app->Win->RPort, gd->Pixel.x - dotrx,
+	 gd->Pixel.y - dotry, app->DotWidth, app->DotHeight);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -326,7 +309,6 @@ void GameClick(struct App *app, WORD x, WORD y)
 	{
 		if (clicked = FindClickedDot(app, x, y))
 		{
-			//Printf("clicked dot %ld.\n", clicked - app->Level->DotStorage);
 			MoveDraggedItems(app->Level, clicked);
 			EraseDraggedItems(app);
 			DrawGame(app);
@@ -359,7 +341,7 @@ void GameUnclick(struct App *app, WORD x, WORD y)
 	UpdateIntersections(app->Level);
 	app->Level->MoveCount++;
 	MoveDraggedItemsBack(app->Level);
-	UpdateInfoText(app);
+	PrintLevelInfo(app);
 	DrawGame(app);
 }
 
@@ -381,39 +363,115 @@ void GameDotDrag(struct App *app, WORD x, WORD y)
 void UpdateInfosAfterLevelLoad(struct App *app)
 {
 	STRPTR title;
-	APTR args[2];
 
-	args[0] = app->Level->LevelSetName;
-	args[1] = app->Level->LevelSetAuthor;
-
-	if (title = VFmtNew("Untangle " VERSION ": %s by %s", args))
+	if (title = FmtNew("Untangle " VERSION ": %s by %s", (LONG)app->Level->LevelSetName,
+	(LONG)app->Level->LevelSetAuthor))
 	{
 		if (app->DynamicScreenTitle) StrFree(app->DynamicScreenTitle);
 		app->DynamicScreenTitle = title;
 	}
 
-	args[0] = app->Level->LevelSetName;
-	args[1] = (APTR)app->LevelNumber;
-
-	if (title = VFmtNew("Untangle: %s, Level %ld", args))
+	if (title = FmtNew("Untangle: %s, Level %ld", (LONG)app->Level->LevelSetName,
+	app->LevelNumber))
 	{
 		if (app->DynamicWindowTitle) StrFree(app->DynamicWindowTitle);
 		app->DynamicWindowTitle = title;
 	}
 
 	SetWindowTitles(app->Win, app->DynamicWindowTitle, app->DynamicScreenTitle);
-	UpdateInfoText(app);
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void PrintLevelTime(struct App *app)
+{
+	static UBYTE tbuf[32];
+	struct RastPort *rp = app->Win->RPort;
+
+	FmtPut(tbuf, "%ld:%02ld", app->LevelTime.Min, app->LevelTime.Sec);
+	SetDrMd(rp, JAM2);
+	SetAPen(rp, 1);
+	SetBPen(rp, 0);
+	Move(rp, app->TimeTextX, app->InfoText.y);
+	Text(rp, tbuf, StrLen(tbuf));
+	SetAPen(rp, 0);
+	RectFill(rp, rp->cp_x, app->InfoText.y - rp->TxBaseline, app->Field.MaxX,
+		app->InfoText.y - rp->TxBaseline + rp->TxHeight);
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void PrintLevelInfo(struct App *app)
+{
+	struct RastPort *rp = app->Win->RPort;
+
+	if (app->CurrentInfoText) StrFree(app->CurrentInfoText);
+
+	if (app->Level)
+	{
+		app->CurrentInfoText = FmtNew("Intersections: %ld  Moves: %ld  Time: ",
+			app->Level->InterCount, app->Level->MoveCount);
+		SetDrMd(rp, JAM2);
+		SetAPen(rp, 1);
+		SetBPen(rp, 0);
+		Move(rp, app->InfoText.x, app->InfoText.y);
+		Text(rp, app->CurrentInfoText, StrLen(app->CurrentInfoText));
+		app->TimeTextX = rp->cp_x;
+		PrintLevelTime(app);
+	}
+}
+
+/*---------------------------------------------------------------------------*/
+
+void StopTimer(struct App *app)
+{
+	AbortIO(&app->TimerReq->tr_node);
+	WaitIO(&app->TimerReq->tr_node);
+}
+
+/*---------------------------------------------------------------------------*/
+
+void PushNextSecond(struct App *app, BOOL redraw)
+{
+	if (redraw) PrintLevelTime(app);
+	app->LevelTime.Sec++;
+
+	if (app->LevelTime.Sec == 60)
+	{
+		app->LevelTime.Sec = 0;
+		app->LevelTime.Min++;
+	}
+
+	app->NextSecond.tv_secs++;
+	app->TimerReq->tr_node.io_Command = TR_ADDREQUEST;
+	app->TimerReq->tr_time = app->NextSecond;
+	SendIO(&app->TimerReq->tr_node);
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void StartTimer(struct App *app)
+{
+	app->LevelTime.Sec = 0;
+	app->LevelTime.Min = 0;
+	GetSysTime(&app->LevelStart);
+	app->NextSecond = app->LevelStart;
+	PushNextSecond(app, TRUE);
 }
 
 /*---------------------------------------------------------------------------*/
 
 void NewGame(struct App *app)
 {
+	app->LevelTime.Min = 0;
+	app->LevelTime.Sec = 0;
+
 	if (app->Level = LoadLevel(app->Win, app->LevelNumber))
 	{
 		PrecalculateLevel(app->Level);
 		ScaleGame(app);
 		UpdateInfosAfterLevelLoad(app);
 		DrawGame(app);
+		StartTimer(app);
 	}
 }
