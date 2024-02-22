@@ -303,7 +303,6 @@ static LONG OpenMyWindow(struct App *app)
 	if (wb = LockPubScreen(NULL))
 	{
 		wintags[2].ti_Data = CalculateMinWidth(app, wb);
-		Printf("min_width = %ld.\n", wintags[2].ti_Data);
 		app->Win = OpenWindowTagList(NULL, wintags);
 		UnlockPubScreen(NULL, wb);
 
