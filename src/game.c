@@ -463,10 +463,13 @@ static void StartTimer(struct App *app)
 
 void NewGame(struct App *app)
 {
+	BPTR olddir;
+
 	app->LevelTime.Min = 0;
 	app->LevelTime.Sec = 0;
+	if (app->LevelSetFile.wa_Lock) olddir = CurrentDir(app->LevelSetFile.wa_Lock);
 
-	if (app->Level = LoadLevel(app->Win, app->LevelNumber, "PROGDIR:StandardSet.iff"))
+	if (app->Level = LoadLevel(app->Win, app->LevelNumber, app->LevelSetFile.wa_Name))
 	{
 		PrecalculateLevel(app->Level);
 		ScaleGame(app);
@@ -474,4 +477,6 @@ void NewGame(struct App *app)
 		DrawGame(app);
 		StartTimer(app);
 	}
+
+	if (app->LevelSetFile.wa_Lock) CurrentDir(olddir);
 }

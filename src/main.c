@@ -14,7 +14,6 @@ struct Library
 #include <proto/gadtools.h>
 #include <proto/graphics.h>
 #include <proto/icon.h>
-#include <workbench/startup.h>
 
 #include "main.h"
 #include "menu.h"
@@ -443,6 +442,31 @@ static void ReportStartupError(err)
 	return;
 }
 
+/*---------------------------------------------------------------------------*/
+
+static void *HandleWorkbenchArgs(struct App *app, struct WBStartup *wbmsg)
+{
+	/* If WBArg[1] is present, it means either Untangle has been used as      */
+	/* a default tool of level set icon, or shift-clicked with level set icon */
+	/* Use default level set filename otherwise.                              */
+
+	if (wbmsg)
+	{
+		if (wbmsg->sm_NumArgs > 1) app->LevelSetFile = wbmsg->sm_ArgList[1];
+		else
+		{
+			app->LevelSetFile.wa_Lock = wbmsg->sm_ArgList[0].wa_Lock;
+			app->LevelSetFile.wa_Name = "StandardSet.iff";
+		}
+	}
+	else
+	{
+		app->LevelSetFile.wa_Lock = NULL;
+		app->LevelSetFile.wa_Name = "PROGDIR:StandardSet.iff";
+	}
+}
+
+/*---------------------------------------------------------------------------*/
 
 ULONG Main(struct WBStartup *wbmsg)
 {
@@ -456,6 +480,7 @@ ULONG Main(struct WBStartup *wbmsg)
 	app.DotWidth = 4;                    /* default if icon toolype does not exist / can't be read */
 	app.DotHeight = 0;
 	app.CurrentInfoText = StrClone("");
+	HandleWorkbenchArgs(&app, wbmsg);
 
 	if (error = GetKickstartLibs(&app, wbmsg))
 	{

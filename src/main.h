@@ -5,6 +5,7 @@
 #include <exec/lists.h>
 #include <graphics/gfx.h>
 #include <devices/timer.h>
+#include <workbench/startup.h>
 
 #define REG(arg, reg) arg __asm(reg)
 
@@ -109,6 +110,7 @@ struct App
 	LONG LevelNumber;                  /* counted from 1, ordinal number in a set */
 	STRPTR DynamicScreenTitle;
 	STRPTR DynamicWindowTitle;
+	struct WBArg LevelSetFile;
 	WORD DotWidth;                     /* pixels */
 	WORD DotHeight;                    /* pixels */
 	struct MsgPort *TimerPort;
