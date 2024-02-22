@@ -466,7 +466,7 @@ void NewGame(struct App *app)
 	app->LevelTime.Min = 0;
 	app->LevelTime.Sec = 0;
 
-	if (app->Level = LoadLevel(app->Win, app->LevelNumber))
+	if (app->Level = LoadLevel(app->Win, app->LevelNumber, "PROGDIR:StandardSet.iff"))
 	{
 		PrecalculateLevel(app->Level);
 		ScaleGame(app);

@@ -10,7 +10,7 @@
 #define ID_SNME MAKE_ID('S','N','M','E')
 #define ID_AUTH MAKE_ID('A','U','T','H')
 
-struct GameLevel *LoadLevel(struct Window *gamewin, LONG level);
+struct GameLevel *LoadLevel(struct Window *gamewin, LONG level, STRPTR filename);
 
 /*---------------------*/
 /* loading error codes */
