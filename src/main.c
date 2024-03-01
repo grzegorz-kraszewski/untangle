@@ -48,9 +48,14 @@ void TheLoop(struct App *app)
 
 	while (running)
 	{
-		signals = Wait(portmask | timermask | SIGBREAKF_CTRL_C);
+		signals = Wait(portmask | timermask | app->SelectorMask | SIGBREAKF_CTRL_C);
 
 		if (signals & SIGBREAKF_CTRL_C) running = FALSE;
+
+		if (signals & app->SelectorMask)
+		{
+			HandleSelector(app);
+		}
 
 		if (signals & portmask)
 		{
@@ -218,24 +223,7 @@ static LONG PrepareDotImage(struct App *app)
 	if (app->DotRaster = AllocMem(rassize, MEMF_CHIP))
 	{
 		CopyMem(fastraster, app->DotRaster, rassize);
-
-		if (app->DotBitMap = AllocBitMap(app->DotWidth, app->DotHeight, 2, BMF_CLEAR, app->Win->RPort->BitMap))
-		{
-			struct RastPort tmrp;
-
-			InitRastPort(&tmrp);
-			tmrp.BitMap = app->DotBitMap;
-			SetDrMd(&tmrp, JAM1);
-			SetAPen(&tmrp, 1);
-			BltTemplate((UBYTE*)app->DotRaster, 0, DOTRASTER_MODULO, &tmrp, 0, 0, app->DotWidth,
-				app->DotHeight);
-			SetAPen(&tmrp, 2);
-			BltTemplate((UBYTE*)&app->DotRaster[app->DotHeight], 0, DOTRASTER_MODULO, &tmrp, 0, 0,
-				app->DotWidth, app->DotHeight);
-			err = SetupMenus(app);
-			FreeBitMap(app->DotBitMap);
-		}
-
+		err = SetupMenus(app);
 		FreeMem(app->DotRaster, rassize);
 	}
 
@@ -308,6 +296,7 @@ static LONG OpenMyWindow(struct App *app)
 		if (app->Win)
 		{
 			err = GetScreenFont(app);
+			if (app->Selector) CloseWindow(app->Selector);
 			CloseWindow(app->Win);
 		}
 	}
@@ -379,6 +368,24 @@ static LONG GetUntanglePrefs(struct App *app, struct WBStartup *wbmsg)
 
 /*---------------------------------------------------------------------------*/
 
+static LONG HighScoreInit(struct App *app, struct WBStartup *wbmsg)
+{
+	LONG result = SERR_NO_MEM;
+
+	if (app->HighScorePool = CreatePool(MEMF_ANY, 2048, 2048))
+	{
+		app->HighScores.mlh_Head = (struct MinNode*)&app->HighScores.mlh_Tail;
+		app->HighScores.mlh_Tail = NULL;
+		app->HighScores.mlh_TailPred = (struct MinNode*)&app->HighScores.mlh_Head;
+		result = GetUntanglePrefs(app, wbmsg);
+		DeletePool(app->HighScorePool);
+	}
+	
+	return result;
+}
+
+/*---------------------------------------------------------------------------*/
+
 static LONG GetKickstartLibs(struct App *app, struct WBStartup *wbmsg)
 {
 	LONG result = SERR_SYSTEM_TOO_OLD;
@@ -402,7 +409,8 @@ static LONG GetKickstartLibs(struct App *app, struct WBStartup *wbmsg)
 							/* icon.library is optional */
 
 							IconBase = OpenLibrary("icon.library", 39);
-							result = GetUntanglePrefs(app, wbmsg);
+							//result = GetUntanglePrefs(app, wbmsg);
+							result = HighScoreInit(app, wbmsg);
 							if (IconBase) CloseLibrary(IconBase);
 							CloseLibrary(AslBase);
 						}
@@ -427,7 +435,8 @@ static STRPTR StartupErrorMessages[] = {
 	"Out of chip memory.\n",
 	"Can't create program menu (out of memory?).\n",
 	"Can't open asl.library v39+.\n",
-	"Can't open timer.device.\n"
+	"Can't open timer.device.\n",
+	"Out of memory.\n"
 };
 
 
@@ -477,9 +486,12 @@ ULONG Main(struct WBStartup *wbmsg)
 	app.LevelNumber = 1;                 /* will be loaded from progress file(?) */
 	app.DynamicScreenTitle = NULL;
 	app.DynamicWindowTitle = NULL;
+	app.SelectorWindowTitle = NULL;
 	app.DotWidth = 4;                    /* default if icon toolype does not exist / can't be read */
 	app.DotHeight = 0;
 	app.CurrentInfoText = StrClone("");
+	app.Selector = NULL;
+	app.SelectorMask = 0;
 	HandleWorkbenchArgs(&app, wbmsg);
 
 	if (error = GetKickstartLibs(&app, wbmsg))
@@ -491,6 +503,6 @@ ULONG Main(struct WBStartup *wbmsg)
 	if (app.CurrentInfoText) StrFree(app.CurrentInfoText);
 	if (app.DynamicScreenTitle) StrFree(app.DynamicScreenTitle);
 	if (app.DynamicWindowTitle) StrFree(app.DynamicWindowTitle);
-
+	if (app.SelectorWindowTitle) StrFree(app.SelectorWindowTitle);
 	return result;
 }

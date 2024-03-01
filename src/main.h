@@ -54,6 +54,7 @@ extern struct Library
 #define SERR_MENU_LAYOUT                5
 #define SERR_NO_ASL                     6
 #define SERR_TIMER                      7
+#define SERR_NO_MEM                     8
 
 
 struct GameDot
@@ -94,12 +95,18 @@ struct GameTime
 	UWORD Sec;
 };
 
+struct HighScore
+{
+	struct MinNode *Node;
+	LONG Seconds;
+	LONG Moves;
+};
+
 struct App
 {
 	struct Window *Win;
 	struct Menu *WinMenu;
 	UWORD *DotRaster;
-	struct BitMap *DotBitMap;
 	struct Rectangle Field;
 	Point InfoText;                    /* start pixel of info text */
 	WORD TimeTextX;                    /* start pixel of time text */
@@ -118,6 +125,11 @@ struct App
 	struct GameTime LevelTime;
 	struct timeval LevelStart;
 	struct timeval NextSecond;
+	struct Window *Selector;           /* level selector / high score table */
+	ULONG SelectorMask;                /* signal mask for selector window IDCMP port. */
+	STRPTR SelectorWindowTitle;
+	APTR HighScorePool;                /* memory pool for highscores */
+	struct MinList HighScores;         /* list of HighScore structures */
 };
 
 #endif  /* UNTANGLE_MAIN_H */
