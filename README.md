@@ -24,7 +24,3 @@ First level of the set is loaded automatically when game starts. Next level is l
 ## Requirements
 * Amiga with any processor (code is compiled for 68000).
 * Kickstart/Workbench 3.0 or higher.
-* For now there is no detection of non-square pixel display modes, so dots are distorted on, for example, "PAL HighRes".
-_
-
-
