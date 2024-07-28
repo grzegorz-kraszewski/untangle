@@ -13,6 +13,11 @@
 
 #include <proto/dos.h>
 
+/* multiplication by 0xFFFF made easy */
+
+#define PROPSCALE(x) (((ULONG)(x) << 16) - x) 
+
+
 void PrintHighScores(struct Selector *selector);
 
 struct Image ScrRender = {0};
@@ -39,7 +44,7 @@ void SelectorLayout(struct Window *mainwin, struct Selector *selector)
 	len_time = TextLength(rp, "Time", 4);
 	len_moves = TextLength(rp, "Moves", 5);
 	
-	selector->LevelREdge = unit + len_level + mainwin->BorderLeft;
+	selector->LevelREdge = mainwin->BorderLeft + unit + len_level;
 	selector->LevelLabelX = selector->LevelREdge - len_level;
 	selector->TimeREdge = selector->LevelREdge + unit + TextLength(rp, "00:00", 5);
 	selector->TimeLabelX = selector->TimeREdge - len_time;
@@ -48,6 +53,19 @@ void SelectorLayout(struct Window *mainwin, struct Selector *selector)
 	selector->InnerWidth = selector->MovesREdge + unit;
 	selector->TotalWidth = selector->InnerWidth + mainwin->BorderRight;
 	selector->FirstEntry = 0;
+}
+
+/*-------------------------------------------------------------------------------------------*/
+/* After selector window is made bigger, adjust FirstEntry to show as many rows as possible. */         
+/*-------------------------------------------------------------------------------------------*/
+
+static void ScrollEntriesToFillWindow(struct Selector *selector)
+{
+	LONG to_be_shown;
+
+	to_be_shown = selector->EntryCount - selector->FirstEntry;
+	if (to_be_shown < selector->SlotsVisible) selector->FirstEntry -= selector->SlotsVisible - to_be_shown;
+	if (selector->FirstEntry < 0) selector->FirstEntry = 0;
 }
 
 /*-------------------------------------------------------------------------------------------*/
@@ -63,6 +81,8 @@ void SelectorRefresh(struct Selector *selector)
 	selector->SlotsVisible = div16(selector->Win->Height - selector->Win->BorderTop -
 		selector->Win->BorderBottom - 1, selector->Font->tf_YSize) - 1;
 
+	ScrollEntriesToFillWindow(selector);
+
 	pot = 0;
 	body = MAXBODY;
 
@@ -70,13 +90,16 @@ void SelectorRefresh(struct Selector *selector)
 	
 	if (selector->SlotsVisible < selector->EntryCount)
 	{
-		body = udiv16((ULONG)selector->SlotsVisible << 16, selector->EntryCount);
-		pot = udiv16((ULONG)selector->FirstEntry << 16, selector->EntryCount);
-		Printf("new body = %ld, pot = %ld.\n", body, pot);
+		body = udiv16(PROPSCALE(selector->SlotsVisible), selector->EntryCount);
+		pot = udiv16(PROPSCALE(selector->FirstEntry), selector->EntryCount - selector->SlotsVisible);
+		Printf("[t: %ld, f: %ld, v: %ld] new body = %ld, pot = %ld.\n", selector->EntryCount,
+			selector->FirstEntry, selector->SlotsVisible, body, pot);
 	}
 
 	NewModifyProp(&Scroller, selector->Win, NULL, FREEVERT | PROPNEWLOOK | PROPBORDERLESS |
-	 AUTOKNOB, MAXPOT, pot, MAXBODY, body, 1); 
+	 AUTOKNOB, 0, pot, MAXBODY, body, 1);
+
+	Printf("Prop modified to (%ld, %ld).\n",ScrProp.VertPot, ScrProp.VertBody);
 		
 	PrintHighScores(selector);
 }
@@ -99,7 +122,7 @@ void OpenSelector(struct Window *mainwin, struct Selector *selector)
 	Scroller.Width = mainwin->BorderRight - 8;
 	Scroller.Height = -Scroller.TopEdge - 12;
 	Scroller.Flags = GFLG_GADGHNONE | GFLG_RELRIGHT | GFLG_RELHEIGHT;
-	Scroller.Activation = GACT_RELVERIFY | GACT_IMMEDIATE | GACT_RIGHTBORDER;
+	Scroller.Activation = GACT_RELVERIFY | GACT_IMMEDIATE | GACT_FOLLOWMOUSE | GACT_RIGHTBORDER;
 	Scroller.GadgetType = GTYP_PROPGADGET;
 	Scroller.GadgetRender = &ScrRender;
 	Scroller.SpecialInfo = &ScrProp;
@@ -117,7 +140,8 @@ void OpenSelector(struct Window *mainwin, struct Selector *selector)
 		WA_SizeGadget, TRUE,
 		WA_Title, selector->WinTitle,
 		//WA_ScreenTitle, app->DynamicScreenTitle,
-		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_MOUSEBUTTONS,
+		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_GADGETUP | IDCMP_GADGETDOWN |
+			IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS,
 		WA_Gadgets, (ULONG)&Scroller,
 		WA_NewLookMenus, TRUE,
 		WA_Activate, TRUE,
@@ -147,6 +171,18 @@ void HandleSelector(struct Selector *selector)
 			case IDCMP_NEWSIZE:
 				SelectorRefresh(selector);
 			break;
+
+			case IDCMP_GADGETUP:
+				Printf("GAD UP\n");
+			break;
+
+			case IDCMP_GADGETDOWN:
+				Printf("GAD DOWN\n");
+			break;
+
+			case IDCMP_MOUSEMOVE:
+				Printf("MMOVE\n");
+			break;
 		}
 
 		ReplyMsg(&imsg->ExecMessage);
@@ -175,6 +211,18 @@ static void PrintHighScoreHeader(struct Selector *selector, WORD y)
 }
 
 /*--------------------------------------------------------------------------------------------*/
+/* As any item in the listing may be shorter (in pixels) than previous one, using JAM2 text   */
+/* mode is not enough, each line has to be pre-erased.                                        */
+/*--------------------------------------------------------------------------------------------*/
+
+static void EraseHighScoreLine(struct Selector *selector, WORD y)
+{
+	y -= selector->Font->tf_Baseline;
+	EraseRect(selector->Win->RPort, selector->LevelLabelX, y, selector->MovesREdge,
+		y + selector->Font->tf_YSize - 1);
+}
+
+/*--------------------------------------------------------------------------------------------*/
 
 static void PrintHighScoreLine(struct Selector *selector, struct HighScore *hs, LONG lvl,
  WORD y)
@@ -183,6 +231,8 @@ static void PrintHighScoreLine(struct Selector *selector, struct HighScore *hs, 
 	WORD x;
 	static UBYTE outbuf[16];
 	struct RastPort *rp = selector->Win->RPort;
+
+	EraseHighScoreLine(selector, y);
 		
 	p[0] = lvl;
 	VFmtPut(outbuf, "%ld", p);
@@ -266,43 +316,63 @@ void PrintHighScores(struct Selector *selector)
 
 /*--------------------------------------------------------------------------------------------*/
 
+static struct HighScore* CreateFirstTimeHighScore(struct Selector *selector)
+{
+	struct HighScore *hscore;
+
+	hscore = AllocPooled(selector->HighScorePool, sizeof(struct HighScore));
+	if (!hscore) return NULL;
+	hscore->Seconds = THE_WORST_TIME_POSSIBLE;
+	hscore->Moves = THE_WORST_MOVECOUNT_POSSIBLE;
+	return hscore;
+}
+
+/*--------------------------------------------------------------------------------------------*/
+/* Number of moves has priority over time. If a level is beaten in less moves than the        */
+/* current best, the new score becomes best, regardless of solving time. On the other hand    */
+/* shorter time is not enough, if more moves have been made.                                  */
+/*--------------------------------------------------------------------------------------------*/
+
+static BOOL BestScore(struct HighScore *current_best, LONG seconds, LONG moves)
+{
+	if (moves < current_best->Moves)
+	{
+		current_best->Moves = moves;
+		current_best->Seconds = seconds;
+		return TRUE;
+	}
+
+	if ((moves == current_best->Moves) && (seconds < current_best->Seconds))
+	{
+		current_best->Seconds = seconds;
+		return TRUE;
+	}
+
+	return FALSE;	
+}
+
+/*--------------------------------------------------------------------------------------------*/
+
 void HighScoreLevelCompleted(struct Selector *selector, LONG level, LONG seconds, LONG moves)
 {
 	struct HighScore *hscore;
 	BOOL new_high = FALSE;
 
 	hscore = FindHighScoreByLevelNumber(&selector->HighScores, level);
-	
+
 	if (!hscore)
 	{
-		if (hscore = AllocPooled(selector->HighScorePool, sizeof(struct HighScore)))
+		if (hscore = CreateFirstTimeHighScore(selector))
 		{
-			hscore->Seconds = 0x7FFFFFFF;
-			hscore->Moves = 0x7FFFFFFF;
 			AddTail((struct List*)&selector->HighScores, (struct Node*)hscore);
 			selector->EntryCount++;
 		}
 	}
-	
-	if (hscore)
+
+	if (!hscore) return;
+	if (BestScore(hscore, seconds, moves))
 	{
-		if (seconds < hscore->Seconds)
-		{
-			hscore->Seconds = seconds;
-			new_high = TRUE;
-		}
-		
-		if (moves < hscore->Moves)
-		{
-			hscore->Moves = moves;
-			new_high = TRUE;
-		}			
-	}
-		
-	if (new_high)
-	{
-		selector->FirstEntry = selector->EntryCount - selector->SlotsVisible;
-		if (selector->FirstEntry < 0) selector->FirstEntry = 0;
+		selector->FirstEntry++;
 		SelectorRefresh(selector);
 	}
 }

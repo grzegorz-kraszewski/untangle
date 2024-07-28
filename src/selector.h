@@ -7,7 +7,6 @@
 
 #include <intuition/screens.h>
 #include <intuition/intuition.h>
-#include <exec/lists.h>
 
 struct HighScore
 {
@@ -15,6 +14,10 @@ struct HighScore
 	LONG Seconds;
 	LONG Moves;
 };
+
+#define THE_WORST_TIME_POSSIBLE          0x7FFFFFFF
+#define THE_WORST_MOVECOUNT_POSSIBLE     0x7FFFFFFF
+
 
 struct Selector
 {
