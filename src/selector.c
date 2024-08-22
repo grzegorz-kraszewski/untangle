@@ -86,21 +86,15 @@ void SelectorRefresh(struct Selector *selector)
 	pot = 0;
 	body = MAXBODY;
 
-	Printf("SlotsVisible = %ld, EntryCount = %ld.\n", selector->SlotsVisible, selector->EntryCount);
-	
 	if (selector->SlotsVisible < selector->EntryCount)
 	{
-		body = udiv16(PROPSCALE(selector->SlotsVisible), selector->EntryCount);
-		pot = udiv16(PROPSCALE(selector->FirstEntry), selector->EntryCount - selector->SlotsVisible);
-		Printf("[t: %ld, f: %ld, v: %ld] new body = %ld, pot = %ld.\n", selector->EntryCount,
-			selector->FirstEntry, selector->SlotsVisible, body, pot);
+		body = divu16(PROPSCALE(selector->SlotsVisible), selector->EntryCount);
+		pot = divu16(PROPSCALE(selector->FirstEntry), selector->EntryCount - selector->SlotsVisible);
 	}
 
 	NewModifyProp(&Scroller, selector->Win, NULL, FREEVERT | PROPNEWLOOK | PROPBORDERLESS |
 	 AUTOKNOB, 0, pot, MAXBODY, body, 1);
 
-	Printf("Prop modified to (%ld, %ld).\n",ScrProp.VertPot, ScrProp.VertBody);
-		
 	PrintHighScores(selector);
 }
 
@@ -148,9 +142,32 @@ void OpenSelector(struct Window *mainwin, struct Selector *selector)
 	TAG_END))
 	{
 		selector->SigMask = 1 << selector->Win->UserPort->mp_SigBit;
+		selector->ScrollerActive = FALSE;
 		SelectorRefresh(selector);
 	}
 }
+
+/*--------------------------------------------------------------------------------------------*/
+/* User has moved the scroller. Redraw the content accordingly.                               */
+
+void ScrollContent(struct Selector *selector)
+{
+	WORD newfirst;
+
+	newfirst = selector->EntryCount - selector->SlotsVisible;
+
+	if (newfirst > 0)
+	{
+		newfirst = divu16(mulu16(newfirst, ScrProp.VertPot), MAXPOT);
+
+		if (newfirst != selector->FirstEntry)
+		{
+			selector->FirstEntry = newfirst;
+			PrintHighScores(selector);
+		}
+	}
+}
+
 
 /*--------------------------------------------------------------------------------------------*/
 /* Called when the main loop receives signal from selector window IDCMP port.                 */
@@ -173,15 +190,15 @@ void HandleSelector(struct Selector *selector)
 			break;
 
 			case IDCMP_GADGETUP:
-				Printf("GAD UP\n");
+				if (imsg->IAddress == &Scroller) selector->ScrollerActive = FALSE;
 			break;
 
 			case IDCMP_GADGETDOWN:
-				Printf("GAD DOWN\n");
+				if (imsg->IAddress == &Scroller) selector->ScrollerActive = TRUE;
 			break;
 
 			case IDCMP_MOUSEMOVE:
-				Printf("MMOVE\n");
+				if (selector->ScrollerActive) ScrollContent(selector);
 			break;
 		}
 
@@ -296,7 +313,7 @@ void PrintHighScores(struct Selector *selector)
 	vpos += font->tf_YSize;
 	level = selector->FirstEntry + 1;
 
-	Printf("listing starts at level %ld.\n", level);
+	// Printf("listing starts at level %ld.\n", level);
 	
 	hs = FindHighScoreByLevelNumber(&selector->HighScores, level); 
 

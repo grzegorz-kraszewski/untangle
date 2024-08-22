@@ -27,6 +27,7 @@ struct Selector
 	ULONG SigMask;
 	APTR HighScorePool;
 	struct MinList HighScores;         /* list of HighScore structures */
+	BOOL ScrollerActive;
 	WORD EntryCount;                   /* number of highscore list entries */
 	WORD SlotsVisible;                 /* how many entries will fit into window */
 	WORD FirstEntry;                   /* first displayed entry counted from 0 */
