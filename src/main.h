@@ -18,6 +18,12 @@ WORD _a = (a), _b = (b); \
 asm("MULS.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
 _r;})
 
+#define mulu16(a,b) ({ \
+LONG _r; \
+WORD _a = (a), _b = (b); \
+asm("MULU.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
+_r;})
+
 #define div16(a,b) ({ \
 WORD _r, _b = (b); \
 LONG _a = (a); \
@@ -25,15 +31,16 @@ asm("DIVS.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
 _r;})
 
 
-#define udiv16(a,b) ({ \
+#define divu16(a,b) ({ \
 UWORD _r, _b = (b); \
 ULONG _a = (a); \
 asm("DIVU.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
 _r;})
 #else
 #define mul16(a,b) a*b
+#define mulu16(a,b) a*b
 #define div16(a,b) a/b
-#define udiv16(a,b) a/b
+#define divu16(a,b) a/b
 #endif
 
 #define ForEachFwd(l, t, v) for (v = (t*)(l)->mlh_Head; v->Node.mln_Succ; v = (t*)v->Node.mln_Succ)
