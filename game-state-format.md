@@ -1,5 +1,5 @@
 # Game state format
-Game state consists of highscores of all the solved levels. The game It is stored as binary data in IFF container. IFF type is `UNTG` the same, as for level file. For now only one chunk, named `HSCR` is defined.
+Game state consists of highscores of all the solved levels. The game state is stored as binary data in IFF container. IFF type is `UNTG` the same, as for level file. For now only one chunk, named `HSCR` is defined.
 ## HSCR
 The chunk contains an array of fixed length records. Each record contains best score for a level. Level record is defined as follows:
 ```
