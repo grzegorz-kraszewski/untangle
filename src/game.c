@@ -72,11 +72,23 @@ void DrawDots(struct RastPort *rp, struct App *app)
 	WORD dotradius_y = app->DotHeight >> 1;
 	struct GameDot *gd;
 
+	SetDrMd(rp, JAM1);
+	SetAPen(rp, 1);
+
 	ForEachFwd(&app->Level->DotList, struct GameDot, gd)
 	{
-		BltMaskBitMapRastPort(app->DotBitMap, 0, 0, rp, gd->Pixel.x - dotradius_x,
-			gd->Pixel.y - dotradius_y, app->DotWidth, app->DotHeight, 0xE0, (APTR)app->DotRaster);
+		BltTemplate(app->DotRaster, 0, 2, rp, gd->Pixel.x - dotradius_x, gd->Pixel.y -
+			dotradius_y, app->DotWidth, app->DotHeight);
 	}
+
+	SetAPen(rp, 2);
+
+	ForEachFwd(&app->Level->DotList, struct GameDot, gd)
+	{
+		BltTemplate(&app->DotRaster[app->DotHeight], 0, 2, rp, gd->Pixel.x - dotradius_x, gd->Pixel.y -
+			dotradius_y, app->DotWidth, app->DotHeight);
+	}
+
 }
 
 /*---------------------------------------------------------------------------*/
@@ -378,7 +390,15 @@ void UpdateInfosAfterLevelLoad(struct App *app)
 		app->DynamicWindowTitle = title;
 	}
 
+	if (title = FmtNew("Untangle: %s", (LONG)app->Level->LevelSetName))
+	{
+		if (app->Selector.WinTitle) StrFree(app->Selector.WinTitle);
+		app->Selector.WinTitle = title;
+	}
+
 	SetWindowTitles(app->Win, app->DynamicWindowTitle, app->DynamicScreenTitle);
+	if (app->Selector.Win) SetWindowTitles(app->Selector.Win, app->Selector.WinTitle,
+		app->DynamicScreenTitle);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -463,10 +483,13 @@ static void StartTimer(struct App *app)
 
 void NewGame(struct App *app)
 {
+	BPTR olddir;
+
 	app->LevelTime.Min = 0;
 	app->LevelTime.Sec = 0;
+	if (app->LevelSetFile.wa_Lock) olddir = CurrentDir(app->LevelSetFile.wa_Lock);
 
-	if (app->Level = LoadLevel(app->Win, app->LevelNumber))
+	if (app->Level = LoadLevel(app->Win, app->LevelNumber, app->LevelSetFile.wa_Name))
 	{
 		PrecalculateLevel(app->Level);
 		ScaleGame(app);
@@ -474,4 +497,6 @@ void NewGame(struct App *app)
 		DrawGame(app);
 		StartTimer(app);
 	}
+
+	if (app->LevelSetFile.wa_Lock) CurrentDir(olddir);
 }

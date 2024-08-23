@@ -1,9 +1,9 @@
 CC = gcc
 LD = gcc
-CFLAGS = -nostdlib -O2 -fbaserel -msmall-code -mregparm -D__NOLIBBASE__ -DUSE_INLINE_STDARG
+CFLAGS = -nostdlib -O2 -fbaserel -msmall-code -fomit-frame-pointer -mregparm -D__NOLIBBASE__ -DUSE_INLINE_STDARG
 LDFLAGS = -s -fbaserel -nostartfiles -nostdlib
 LIBS = 
-OBJS = start.o main.o menu.o game.o loader.o lscm.o savelevel.o strutils.o
+OBJS = start.o main.o menu.o game.o loader.o lscm.o savelevel.o strutils.o selector.o
 EXE = Untangle
 
 all: $(OBJS)
@@ -20,11 +20,13 @@ clean:
 
 # dependencies
 
-game.o: game.c main.h loader.h lscm.h strutils.h version.h
-loader.o: loader.c loader.h main.h strutils.h
-lscm.o: lscm.c lscm.h main.h
-main.o: main.c main.h menu.h strutils.h version.h
-menu.o: menu.c main.h game.h
-savelevel.o: savelevel.c savelevel.h main.h loader.h
+game.o: game.c main.h selector.h loader.h lscm.h strutils.h version.h
+loader.o: loader.c loader.h main.h selector.h strutils.h
+lscm.o: lscm.c lscm.h main.h selector.h
+main.o: main.c main.h selector.h menu.h strutils.h version.h
+menu.o: menu.c main.h selector.h game.h
+savelevel.o: savelevel.c savelevel.h main.h selector.h loader.h
+selector.o: selector.c main.h selector.h
 start.o: start.c version.h
 strutils.o: strutils.c strutils.h
+

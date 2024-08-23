@@ -14,7 +14,6 @@ struct Library
 #include <proto/gadtools.h>
 #include <proto/graphics.h>
 #include <proto/icon.h>
-#include <workbench/startup.h>
 
 #include "main.h"
 #include "menu.h"
@@ -35,6 +34,34 @@ void InitList(struct MinList *list)
 
 /*---------------------------------------------------------------------------*/
 
+static BOOL UserRejectsLevelChange(struct App *app)
+{
+	struct EasyStruct es = {
+		sizeof(struct EasyStruct),
+		0,
+		"Untangle",
+		"Exit current level?",
+		"Yes|No"
+	};
+
+	return (1 - EasyRequestArgs(app->Win, &es, NULL, NULL));
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void ChangeLevel(struct App *app, LONG level)
+{
+	if ((app->Level->MoveCount > 0) && UserRejectsLevelChange(app)) return;
+	StopTimer(app);
+	EraseGame(app);
+	UnloadLevel(app->Level);
+	app->Level = NULL;
+	app->LevelNumber = level + 1;
+	NewGame(app);
+}
+
+/*---------------------------------------------------------------------------*/
+
 void TheLoop(struct App *app)
 {
 	BOOL running = TRUE;
@@ -49,9 +76,15 @@ void TheLoop(struct App *app)
 
 	while (running)
 	{
-		signals = Wait(portmask | timermask | SIGBREAKF_CTRL_C);
+		signals = Wait(portmask | timermask | app->Selector.SigMask | SIGBREAKF_CTRL_C);
 
 		if (signals & SIGBREAKF_CTRL_C) running = FALSE;
+
+		if (signals & app->Selector.SigMask)
+		{
+			LONG newlevel = HandleSelector(&app->Selector);
+			if (newlevel != NO_LEVEL_CHANGE) ChangeLevel(app, newlevel);
+		}
 
 		if (signals & portmask)
 		{
@@ -89,6 +122,9 @@ void TheLoop(struct App *app)
 						 		if (app->Level->InterCount == 0)
 						 		{
 									StopTimer(app);
+									HighScoreLevelCompleted(&app->Selector, app->LevelNumber,
+										app->LevelTime.Min * 60 + app->LevelTime.Sec,
+										app->Level->MoveCount);
 									DisplayBeep(app->Win->WScreen);
 									Delay(50);
 									EraseGame(app);
@@ -219,24 +255,7 @@ static LONG PrepareDotImage(struct App *app)
 	if (app->DotRaster = AllocMem(rassize, MEMF_CHIP))
 	{
 		CopyMem(fastraster, app->DotRaster, rassize);
-
-		if (app->DotBitMap = AllocBitMap(app->DotWidth, app->DotHeight, 2, BMF_CLEAR, app->Win->RPort->BitMap))
-		{
-			struct RastPort tmrp;
-
-			InitRastPort(&tmrp);
-			tmrp.BitMap = app->DotBitMap;
-			SetDrMd(&tmrp, JAM1);
-			SetAPen(&tmrp, 1);
-			BltTemplate((UBYTE*)app->DotRaster, 0, DOTRASTER_MODULO, &tmrp, 0, 0, app->DotWidth,
-				app->DotHeight);
-			SetAPen(&tmrp, 2);
-			BltTemplate((UBYTE*)&app->DotRaster[app->DotHeight], 0, DOTRASTER_MODULO, &tmrp, 0, 0,
-				app->DotWidth, app->DotHeight);
-			err = SetupMenus(app);
-			FreeBitMap(app->DotBitMap);
-		}
-
+		err = SetupMenus(app);
 		FreeMem(app->DotRaster, rassize);
 	}
 
@@ -251,6 +270,8 @@ static LONG GetScreenFont(struct App *app)
 
 	if (app->InfoFont = OpenFont(app->Win->WScreen->Font))
 	{
+		SetFont(app->Win->RPort, app->InfoFont);
+		SelectorLayout(app->Win, &app->Selector);
 		err = PrepareDotImage(app);
 		CloseFont(app->InfoFont);
 	}
@@ -303,13 +324,13 @@ static LONG OpenMyWindow(struct App *app)
 	if (wb = LockPubScreen(NULL))
 	{
 		wintags[2].ti_Data = CalculateMinWidth(app, wb);
-		Printf("min_width = %ld.\n", wintags[2].ti_Data);
 		app->Win = OpenWindowTagList(NULL, wintags);
 		UnlockPubScreen(NULL, wb);
 
 		if (app->Win)
 		{
 			err = GetScreenFont(app);
+			if (app->Selector.Win) CloseWindow(app->Selector.Win);
 			CloseWindow(app->Win);
 		}
 	}
@@ -381,6 +402,26 @@ static LONG GetUntanglePrefs(struct App *app, struct WBStartup *wbmsg)
 
 /*---------------------------------------------------------------------------*/
 
+static LONG HighScoreInit(struct App *app, struct WBStartup *wbmsg)
+{
+	LONG result = SERR_NO_MEM;
+	struct MinList *highscores = &app->Selector.HighScores;
+
+	if (app->Selector.HighScorePool = CreatePool(MEMF_ANY, 2048, 2048))
+	{
+		highscores->mlh_Head = (struct MinNode*)&highscores->mlh_Tail;
+		highscores->mlh_Tail = NULL;
+		highscores->mlh_TailPred = (struct MinNode*)&highscores->mlh_Head;
+		app->Selector.EntryCount = 0;
+		result = GetUntanglePrefs(app, wbmsg);
+		DeletePool(app->Selector.HighScorePool);
+	}
+	
+	return result;
+}
+
+/*---------------------------------------------------------------------------*/
+
 static LONG GetKickstartLibs(struct App *app, struct WBStartup *wbmsg)
 {
 	LONG result = SERR_SYSTEM_TOO_OLD;
@@ -404,7 +445,8 @@ static LONG GetKickstartLibs(struct App *app, struct WBStartup *wbmsg)
 							/* icon.library is optional */
 
 							IconBase = OpenLibrary("icon.library", 39);
-							result = GetUntanglePrefs(app, wbmsg);
+							//result = GetUntanglePrefs(app, wbmsg);
+							result = HighScoreInit(app, wbmsg);
 							if (IconBase) CloseLibrary(IconBase);
 							CloseLibrary(AslBase);
 						}
@@ -429,7 +471,8 @@ static STRPTR StartupErrorMessages[] = {
 	"Out of chip memory.\n",
 	"Can't create program menu (out of memory?).\n",
 	"Can't open asl.library v39+.\n",
-	"Can't open timer.device.\n"
+	"Can't open timer.device.\n",
+	"Out of memory.\n"
 };
 
 
@@ -444,6 +487,31 @@ static void ReportStartupError(err)
 	return;
 }
 
+/*---------------------------------------------------------------------------*/
+
+static void *HandleWorkbenchArgs(struct App *app, struct WBStartup *wbmsg)
+{
+	/* If WBArg[1] is present, it means either Untangle has been used as      */
+	/* a default tool of level set icon, or shift-clicked with level set icon */
+	/* Use default level set filename otherwise.                              */
+
+	if (wbmsg)
+	{
+		if (wbmsg->sm_NumArgs > 1) app->LevelSetFile = wbmsg->sm_ArgList[1];
+		else
+		{
+			app->LevelSetFile.wa_Lock = wbmsg->sm_ArgList[0].wa_Lock;
+			app->LevelSetFile.wa_Name = "StandardSet.iff";
+		}
+	}
+	else
+	{
+		app->LevelSetFile.wa_Lock = NULL;
+		app->LevelSetFile.wa_Name = "PROGDIR:StandardSet.iff";
+	}
+}
+
+/*---------------------------------------------------------------------------*/
 
 ULONG Main(struct WBStartup *wbmsg)
 {
@@ -457,6 +525,10 @@ ULONG Main(struct WBStartup *wbmsg)
 	app.DotWidth = 4;                    /* default if icon toolype does not exist / can't be read */
 	app.DotHeight = 0;
 	app.CurrentInfoText = StrClone("");
+	app.Selector.Win = NULL;
+	app.Selector.WinTitle = NULL;
+	app.Selector.SigMask = 0;
+	HandleWorkbenchArgs(&app, wbmsg);
 
 	if (error = GetKickstartLibs(&app, wbmsg))
 	{
@@ -467,6 +539,6 @@ ULONG Main(struct WBStartup *wbmsg)
 	if (app.CurrentInfoText) StrFree(app.CurrentInfoText);
 	if (app.DynamicScreenTitle) StrFree(app.DynamicScreenTitle);
 	if (app.DynamicWindowTitle) StrFree(app.DynamicWindowTitle);
-
+	if (app.Selector.WinTitle) StrFree(app.Selector.WinTitle);
 	return result;
 }

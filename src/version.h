@@ -2,6 +2,6 @@
 /* Untangle */
 /*----------*/
 
-#define VERSION "0.4"
-#define RELDATE "21.02.2024"
+#define VERSION "0.5"
+#define RELDATE "23.08.2024"
 #define RELYEAR "2024"

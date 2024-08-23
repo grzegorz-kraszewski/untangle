@@ -5,6 +5,9 @@
 #include <exec/lists.h>
 #include <graphics/gfx.h>
 #include <devices/timer.h>
+#include <workbench/startup.h>
+
+#include "selector.h"
 
 #define REG(arg, reg) arg __asm(reg)
 
@@ -15,14 +18,29 @@ WORD _a = (a), _b = (b); \
 asm("MULS.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
 _r;})
 
+#define mulu16(a,b) ({ \
+LONG _r; \
+WORD _a = (a), _b = (b); \
+asm("MULU.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
+_r;})
+
 #define div16(a,b) ({ \
 WORD _r, _b = (b); \
 LONG _a = (a); \
 asm("DIVS.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
 _r;})
+
+
+#define divu16(a,b) ({ \
+UWORD _r, _b = (b); \
+ULONG _a = (a); \
+asm("DIVU.W %2,%0": "=d" (_r): "0" (_a), "dmi" (_b): "cc"); \
+_r;})
 #else
 #define mul16(a,b) a*b
+#define mulu16(a,b) a*b
 #define div16(a,b) a/b
+#define divu16(a,b) a/b
 #endif
 
 #define ForEachFwd(l, t, v) for (v = (t*)(l)->mlh_Head; v->Node.mln_Succ; v = (t*)v->Node.mln_Succ)
@@ -53,6 +71,7 @@ extern struct Library
 #define SERR_MENU_LAYOUT                5
 #define SERR_NO_ASL                     6
 #define SERR_TIMER                      7
+#define SERR_NO_MEM                     8
 
 
 struct GameDot
@@ -93,12 +112,12 @@ struct GameTime
 	UWORD Sec;
 };
 
+
 struct App
 {
 	struct Window *Win;
 	struct Menu *WinMenu;
 	UWORD *DotRaster;
-	struct BitMap *DotBitMap;
 	struct Rectangle Field;
 	Point InfoText;                    /* start pixel of info text */
 	WORD TimeTextX;                    /* start pixel of time text */
@@ -109,6 +128,7 @@ struct App
 	LONG LevelNumber;                  /* counted from 1, ordinal number in a set */
 	STRPTR DynamicScreenTitle;
 	STRPTR DynamicWindowTitle;
+	struct WBArg LevelSetFile;
 	WORD DotWidth;                     /* pixels */
 	WORD DotHeight;                    /* pixels */
 	struct MsgPort *TimerPort;
@@ -116,6 +136,7 @@ struct App
 	struct GameTime LevelTime;
 	struct timeval LevelStart;
 	struct timeval NextSecond;
+	struct Selector Selector;
 };
 
 #endif  /* UNTANGLE_MAIN_H */

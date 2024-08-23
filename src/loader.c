@@ -260,12 +260,12 @@ static LONG SkipToLevel(struct GameLevel *gl, struct IFFHandle *handle, LONG lev
 
 /*---------------------------------------------------------------------------*/
 
-static LONG OpenFile(struct GameLevel *gl, struct IFFHandle *handle, LONG level)
+static LONG OpenFile(struct GameLevel *gl, struct IFFHandle *handle, LONG level, STRPTR filename)
 {
 	LONG err = LERR_FILE_OPEN_FAILED;
 	BPTR levfile;
 
-	if (levfile = Open("PROGDIR:StandardSet.iff", MODE_OLDFILE))
+	if (levfile = Open(filename, MODE_OLDFILE))
 	{
 		handle->iff_Stream = levfile;
 		InitIFFasDOS(handle);
@@ -278,14 +278,14 @@ static LONG OpenFile(struct GameLevel *gl, struct IFFHandle *handle, LONG level)
 
 /*---------------------------------------------------------------------------*/
 
-static LONG LoadLevel2(struct GameLevel *gl, LONG level)
+static LONG LoadLevel2(struct GameLevel *gl, LONG level, STRPTR filename)
 {
 	struct IFFHandle *handle;
 	LONG err;
 
 	if (handle = AllocIFF())
 	{
-		err = OpenFile(gl, handle, level);
+		err = OpenFile(gl, handle, level, filename);
 		FreeIFF(handle);
 	}
 	else err = LERR_OUT_OF_MEMORY;
@@ -358,7 +358,7 @@ void UnloadLevel(struct GameLevel *gl)
 
 /*---------------------------------------------------------------------------*/
 
-struct GameLevel* LoadLevel(struct Window *gwin, LONG level)
+struct GameLevel* LoadLevel(struct Window *gwin, LONG level, STRPTR filename)
 {
 	struct GameLevel *gl;
 	LONG err = LERR_OUT_OF_MEMORY;
@@ -375,7 +375,7 @@ struct GameLevel* LoadLevel(struct Window *gwin, LONG level)
 		gl->LevelSetName = NULL;
 		gl->LevelSetAuthor = NULL;
 		gl->MoveCount = 0;
-		err = LoadLevel2(gl, level);
+		err = LoadLevel2(gl, level, filename);
 	}
 
 	if (err)
