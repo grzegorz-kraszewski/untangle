@@ -18,6 +18,7 @@ struct HighScore
 #define THE_WORST_TIME_POSSIBLE          0x7FFFFFFF
 #define THE_WORST_MOVECOUNT_POSSIBLE     0x7FFFFFFF
 
+#define NO_LEVEL_CHANGE   -1
 
 struct Selector
 {
@@ -39,11 +40,13 @@ struct Selector
 	WORD MovesLabelX;
 	WORD InnerWidth;
 	WORD TotalWidth;
+	WORD ListYStart;
+	WORD LineHeight;
 };
 
 void SelectorLayout(struct Window *mainwin, struct Selector *selector);
 void OpenSelector(struct Window *mainwin, struct Selector *selector);
-void HandleSelector(struct Selector *selector);
+LONG HandleSelector(struct Selector *selector);
 void HighScoreLevelCompleted(struct Selector *selector, LONG level, LONG seconds, LONG moves);
 
 #endif    /* UNTANGLE_SELECTOR_H */

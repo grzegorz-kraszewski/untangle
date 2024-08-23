@@ -34,6 +34,34 @@ void InitList(struct MinList *list)
 
 /*---------------------------------------------------------------------------*/
 
+static BOOL UserRejectsLevelChange(struct App *app)
+{
+	struct EasyStruct es = {
+		sizeof(struct EasyStruct),
+		0,
+		"Untangle",
+		"Exit current level?",
+		"Yes|No"
+	};
+
+	return (1 - EasyRequestArgs(app->Win, &es, NULL, NULL));
+}
+
+/*---------------------------------------------------------------------------*/
+
+static void ChangeLevel(struct App *app, LONG level)
+{
+	if ((app->Level->MoveCount > 0) && UserRejectsLevelChange(app)) return;
+	StopTimer(app);
+	EraseGame(app);
+	UnloadLevel(app->Level);
+	app->Level = NULL;
+	app->LevelNumber = level + 1;
+	NewGame(app);
+}
+
+/*---------------------------------------------------------------------------*/
+
 void TheLoop(struct App *app)
 {
 	BOOL running = TRUE;
@@ -54,7 +82,8 @@ void TheLoop(struct App *app)
 
 		if (signals & app->Selector.SigMask)
 		{
-			HandleSelector(&app->Selector);
+			LONG newlevel = HandleSelector(&app->Selector);
+			if (newlevel != NO_LEVEL_CHANGE) ChangeLevel(app, newlevel);
 		}
 
 		if (signals & portmask)

@@ -24,10 +24,48 @@ struct Image ScrRender = {0};
 struct PropInfo ScrProp = {0};
 struct Gadget Scroller = {0};
 
+
+/*--------------------------------------------------------------------------------------------*/
+
+static struct HighScore* CreateFirstTimeHighScore(struct Selector *selector)
+{
+	struct HighScore *hscore;
+
+	hscore = AllocPooled(selector->HighScorePool, sizeof(struct HighScore));
+	if (!hscore) return NULL;
+	hscore->Seconds = THE_WORST_TIME_POSSIBLE;
+	hscore->Moves = THE_WORST_MOVECOUNT_POSSIBLE;
+	return hscore;
+}
+
+/*-------------------------------------------------------------------------------------------*/
+/* The highscore list should always contain entry for the first unsolved level, so it can be */
+/* selected by player. The function checks if the last entry in the list is unsolved. If no  */
+/* it inserts one. Does not call selector refresh.                                           */
+/*-------------------------------------------------------------------------------------------*/
+
+static void InsertFirstUnsolved(struct Selector *selector)
+{
+	struct HighScore *last;
+
+	last = (struct HighScore*)selector->HighScores.mlh_TailPred;
+
+	/* if highscore list is not empty and the last one is unsolved, do nothing. */
+
+	if (last && (last->Seconds == THE_WORST_TIME_POSSIBLE)) return;
+
+	if (last = CreateFirstTimeHighScore(selector))
+	{
+		AddTail((struct List*)&selector->HighScores, (struct Node*)last);
+		selector->EntryCount++;
+	}
+}
+
+
 /*-------------------------------------------------------------------------------------------*/
 /* This function does not require level selector window to be opened. Main window RastPort   */
 /* is used, as both windows are on the same screen and use the same font. Therefore it is    */
-/* called at game startup, after opening the main window.                                   */
+/* called at game startup, after opening the main window.                                    */
 /*-------------------------------------------------------------------------------------------*/
 
 void SelectorLayout(struct Window *mainwin, struct Selector *selector)
@@ -53,6 +91,8 @@ void SelectorLayout(struct Window *mainwin, struct Selector *selector)
 	selector->InnerWidth = selector->MovesREdge + unit;
 	selector->TotalWidth = selector->InnerWidth + mainwin->BorderRight;
 	selector->FirstEntry = 0;
+
+	InsertFirstUnsolved(selector);
 }
 
 /*-------------------------------------------------------------------------------------------*/
@@ -150,7 +190,7 @@ void OpenSelector(struct Window *mainwin, struct Selector *selector)
 /*--------------------------------------------------------------------------------------------*/
 /* User has moved the scroller. Redraw the content accordingly.                               */
 
-void ScrollContent(struct Selector *selector)
+static void ScrollContent(struct Selector *selector)
 {
 	WORD newfirst;
 
@@ -168,13 +208,30 @@ void ScrollContent(struct Selector *selector)
 	}
 }
 
+/*--------------------------------------------------------------------------------------------*/
+
+static LONG HandleClick(struct Selector *selector, WORD x, WORD y)
+{
+	WORD unit = (selector->Font->tf_YSize >> 2) + 1;
+
+	if (x < selector->Win->BorderLeft + unit) return NO_LEVEL_CHANGE;
+	if (x >= selector->MovesREdge) return NO_LEVEL_CHANGE;
+	y -= selector->ListYStart;
+	if (y < 0) return NO_LEVEL_CHANGE;
+	y = divu16(y, selector->LineHeight);
+	y += selector->FirstEntry;
+	if (y >= selector->EntryCount) return NO_LEVEL_CHANGE; /* handle first unsolved level here */
+	return y;
+}
 
 /*--------------------------------------------------------------------------------------------*/
-/* Called when the main loop receives signal from selector window IDCMP port.                 */
+/* Called when the main loop receives signal from selector window IDCMP port. Returns level   */
+/* number to load or NO_LEVEL_CHANGE.                                                         */
 
-void HandleSelector(struct Selector *selector)
+LONG HandleSelector(struct Selector *selector)
 {
 	struct IntuiMessage *imsg;
+	LONG result = NO_LEVEL_CHANGE;
 	BOOL closed = FALSE;
 
 	while (imsg = (struct IntuiMessage*)GetMsg(selector->Win->UserPort))
@@ -200,6 +257,11 @@ void HandleSelector(struct Selector *selector)
 			case IDCMP_MOUSEMOVE:
 				if (selector->ScrollerActive) ScrollContent(selector);
 			break;
+
+			case IDCMP_MOUSEBUTTONS:
+				if (imsg->Code == SELECTDOWN)
+					result = HandleClick(selector, imsg->MouseX, imsg->MouseY);
+			break;
 		}
 
 		ReplyMsg(&imsg->ExecMessage);
@@ -211,6 +273,8 @@ void HandleSelector(struct Selector *selector)
 		selector->Win = NULL;
 		selector->SigMask = 0;
 	}
+
+	return result;
 }
 
 /*--------------------------------------------------------------------------------------------*/
@@ -258,15 +322,15 @@ static void PrintHighScoreLine(struct Selector *selector, struct HighScore *hs, 
 	Move(rp, x, y);
 	Text(rp, outbuf, txtlen);
 	
-	p[0] = hs->Seconds;
-	VFmtPut(outbuf, "%ld", p);
+	if ((p[0] = hs->Seconds) == THE_WORST_TIME_POSSIBLE) StrCopy("--", outbuf);
+	else VFmtPut(outbuf, "%ld", p);
 	txtlen = StrLen(outbuf);	
 	x = selector->TimeREdge - TextLength(rp, outbuf, txtlen);
 	Move(rp, x, y);
 	Text(rp, outbuf, txtlen);
 
-	p[0] = hs->Moves;
-	VFmtPut(outbuf, "%ld", p);
+	if ((p[0] = hs->Moves) == THE_WORST_MOVECOUNT_POSSIBLE) StrCopy("--", outbuf);
+	else VFmtPut(outbuf, "%ld", p);
 	txtlen = StrLen(outbuf);	
 	x = selector->MovesREdge - TextLength(rp, outbuf, txtlen);
 	Move(rp, x, y);
@@ -312,6 +376,8 @@ void PrintHighScores(struct Selector *selector)
 	PrintHighScoreHeader(selector, vpos);
 	vpos += font->tf_YSize;
 	level = selector->FirstEntry + 1;
+	selector->ListYStart = selector->Win->BorderTop + font->tf_YSize + 1;
+	selector->LineHeight = font->tf_YSize;
 
 	// Printf("listing starts at level %ld.\n", level);
 	
@@ -331,18 +397,6 @@ void PrintHighScores(struct Selector *selector)
 	FreeScreenDrawInfo(selector->Win->WScreen, dri);
 }
 
-/*--------------------------------------------------------------------------------------------*/
-
-static struct HighScore* CreateFirstTimeHighScore(struct Selector *selector)
-{
-	struct HighScore *hscore;
-
-	hscore = AllocPooled(selector->HighScorePool, sizeof(struct HighScore));
-	if (!hscore) return NULL;
-	hscore->Seconds = THE_WORST_TIME_POSSIBLE;
-	hscore->Moves = THE_WORST_MOVECOUNT_POSSIBLE;
-	return hscore;
-}
 
 /*--------------------------------------------------------------------------------------------*/
 /* Number of moves has priority over time. If a level is beaten in less moves than the        */
@@ -377,19 +431,9 @@ void HighScoreLevelCompleted(struct Selector *selector, LONG level, LONG seconds
 
 	hscore = FindHighScoreByLevelNumber(&selector->HighScores, level);
 
-	if (!hscore)
-	{
-		if (hscore = CreateFirstTimeHighScore(selector))
-		{
-			AddTail((struct List*)&selector->HighScores, (struct Node*)hscore);
-			selector->EntryCount++;
-		}
-	}
+	if (!hscore) return; /* panic, should never happen */
 
-	if (!hscore) return;
-	if (BestScore(hscore, seconds, moves))
-	{
-		selector->FirstEntry++;
-		SelectorRefresh(selector);
-	}
+	if (BestScore(hscore, seconds, moves)) selector->FirstEntry++;
+	InsertFirstUnsolved(selector);
+	SelectorRefresh(selector);
 }
