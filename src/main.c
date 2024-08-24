@@ -49,6 +49,16 @@ static BOOL UserRejectsLevelChange(struct App *app)
 
 /*---------------------------------------------------------------------------*/
 
+inline void StoreWindowPosition(struct Window *win, struct WinPosRecord *rec)
+{
+	rec->x = win->LeftEdge;
+	rec->y = win->TopEdge;
+	rec->w = win->Width;
+	rec->h = win->Height;
+}
+
+/*---------------------------------------------------------------------------*/
+
 static void ChangeLevel(struct App *app, LONG level)
 {
 	if ((app->Level->MoveCount > 0) && UserRejectsLevelChange(app)) return;
@@ -142,6 +152,10 @@ void TheLoop(struct App *app)
 						{
 							GameDotDrag(app, imsg->MouseX, imsg->MouseY);
 						}
+					break;
+
+					case IDCMP_CHANGEWINDOW:
+						StoreWindowPosition(app->Win, &app->MainWinPos);
 					break;
 				}
 
@@ -307,9 +321,11 @@ struct TagItem wintags[] = {
 	{ WA_Title, 0 /* DefWindowTitle */ },
 	{ WA_ScreenTitle, 0 /* DefScreenTitle */ },
 	{ WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_MENUPICK | IDCMP_NEWSIZE | IDCMP_MOUSEBUTTONS
-	  | IDCMP_MOUSEMOVE | IDCMP_SIZEVERIFY },
+	  | IDCMP_MOUSEMOVE | IDCMP_SIZEVERIFY | IDCMP_CHANGEWINDOW },
 	{ WA_NewLookMenus, TRUE },
 	{ WA_Activate, TRUE },
+	{ WA_Left, 0 },
+	{ WA_Top, 0 },
 	{ TAG_END, 0 }
 };
 
@@ -324,11 +340,13 @@ static LONG OpenMyWindow(struct App *app)
 	if (wb = LockPubScreen(NULL))
 	{
 		wintags[2].ti_Data = CalculateMinWidth(app, wb);
+		wintags[16].ti_Data = wb->BarHeight + 1;
 		app->Win = OpenWindowTagList(NULL, wintags);
 		UnlockPubScreen(NULL, wb);
 
 		if (app->Win)
 		{
+			StoreWindowPosition(app->Win, &app->MainWinPos);
 			err = GetScreenFont(app);
 			if (app->Selector.Win) CloseWindow(app->Selector.Win);
 			CloseWindow(app->Win);

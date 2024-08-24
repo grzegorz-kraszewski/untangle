@@ -175,12 +175,13 @@ void OpenSelector(struct Window *mainwin, struct Selector *selector)
 		WA_Title, selector->WinTitle,
 		//WA_ScreenTitle, app->DynamicScreenTitle,
 		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_GADGETUP | IDCMP_GADGETDOWN |
-			IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS,
+			IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS | IDCMP_CHANGEWINDOW,
 		WA_Gadgets, (ULONG)&Scroller,
 		WA_NewLookMenus, TRUE,
 		WA_Activate, TRUE,
 	TAG_END))
 	{
+		StoreWindowPosition(selector->Win, &selector->SelWinPos);
 		selector->SigMask = 1 << selector->Win->UserPort->mp_SigBit;
 		selector->ScrollerActive = FALSE;
 		SelectorRefresh(selector);
@@ -261,6 +262,10 @@ LONG HandleSelector(struct Selector *selector)
 			case IDCMP_MOUSEBUTTONS:
 				if (imsg->Code == SELECTDOWN)
 					result = HandleClick(selector, imsg->MouseX, imsg->MouseY);
+			break;
+
+			case IDCMP_CHANGEWINDOW:
+				StoreWindowPosition(selector->Win, &selector->SelWinPos);
 			break;
 		}
 

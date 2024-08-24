@@ -112,7 +112,6 @@ struct GameTime
 	UWORD Sec;
 };
 
-
 struct App
 {
 	struct Window *Win;
@@ -137,6 +136,10 @@ struct App
 	struct timeval LevelStart;
 	struct timeval NextSecond;
 	struct Selector Selector;
+	struct WinPosRecord MainWinPos;
 };
 
+inline void StoreWindowPosition(struct Window *win, struct WinPosRecord *rec);
+
+ 
 #endif  /* UNTANGLE_MAIN_H */
