@@ -21,6 +21,7 @@ struct Library
 #include "version.h"
 #include "savestate.h"
 
+
 STRPTR DefScreenTitle = "Untangle " VERSION " by RastPort " RELYEAR;
 STRPTR DefWindowTitle = "Untangle";
 
@@ -93,7 +94,9 @@ void TheLoop(struct App *app)
 
 		if (signals & app->Selector.SigMask)
 		{
-			LONG newlevel = HandleSelector(&app->Selector);
+			LONG newlevel;
+
+			newlevel = HandleSelector(&app->Selector);
 			if (newlevel != NO_LEVEL_CHANGE) ChangeLevel(app, newlevel);
 		}
 
@@ -341,17 +344,28 @@ static LONG OpenMyWindow(struct App *app)
 
 	if (wb = LockPubScreen(NULL))
 	{
-		// Default values for selector window position
-		// stored to the game state when selector window
-		// is never opened.
+		// Default values for selector window position.
 
 		app->Selector.SelWinPos.x = 0;
 		app->Selector.SelWinPos.y = wb->BarHeight + 1;
 		app->Selector.SelWinPos.w = 200;
 		app->Selector.SelWinPos.h = 400;
 
+		// Default values for main window position.
+
+		app->MainWinPos.x = 0;
+		app->MainWinPos.y = wb->BarHeight + 1;
+		app->MainWinPos.w = 400;
+		app->MainWinPos.h = 400;
+
+		LoadState(app);
+
+		wintags[15].ti_Data = app->MainWinPos.x;
+		wintags[16].ti_Data = app->MainWinPos.y;
+		wintags[0].ti_Data = app->MainWinPos.w;
+		wintags[1].ti_Data = app->MainWinPos.h;
+
 		wintags[2].ti_Data = CalculateMinWidth(app, wb);
-		wintags[16].ti_Data = wb->BarHeight + 1;
 		app->Win = OpenWindowTagList(NULL, wintags);
 		UnlockPubScreen(NULL, wb);
 

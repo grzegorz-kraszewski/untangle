@@ -3,20 +3,11 @@
 #include <proto/intuition.h>
 
 #include "main.h"
-
-#define ID_UNTG MAKE_ID('U','N','T','G')
-#define ID_HSCR MAKE_ID('H','S','C','R')
-#define ID_WINP MAKE_ID('W','I','N','P')
-
-struct HighScoreRecord
-{
-	LONG seconds;
-	LONG moves;
-};
+#include "savestate.h"
 
 /*--------------------------------------------------------------------------*/
 
-static void SaveStateError(struct App *app, STRPTR opdesc, LONG ecode)
+void StateError(struct App *app, STRPTR opdesc, LONG ecode)
 {
 	Printf("Save state error: '%s' error code %ld.\n", opdesc, ecode);
 }
@@ -50,7 +41,7 @@ static void SaveStateHighScores(struct App *app, struct IFFHandle *out)
 		ecode = PopChunk(out);
 	}
 
-	if (ecode) SaveStateError(app, "writing high scores", ecode);
+	if (ecode) StateError(app, "writing high scores", ecode);
 }
 
 /*--------------------------------------------------------------------------*/
@@ -75,7 +66,7 @@ static void SaveStateWinPositions(struct App *app, struct IFFHandle *out)
 		ecode = PopChunk(out);
 	}
 
-	if (ecode) SaveStateError(app, "writing windows positions", ecode);
+	if (ecode) StateError(app, "writing windows positions", ecode);
 }
 
 /*--------------------------------------------------------------------------*/
@@ -93,7 +84,7 @@ static void SaveStateHeader(struct App *app, struct IFFHandle *out)
 		ecode = PopChunk(out);
 	}
 
-	if (ecode) SaveStateError(app, "writing IFF header", ecode);
+	if (ecode) StateError(app, "writing IFF header", ecode);
 }
 
 /*--------------------------------------------------------------------------*/
@@ -114,11 +105,11 @@ static void SaveState2(struct App *app, BPTR output)
 			SaveStateHeader(app, out);
 			CloseIFF(out);
 		}
-		else SaveStateError(app, "opening IFF stream", ecode);
+		else StateError(app, "opening IFF stream for write", ecode);
 
 		FreeIFF(out);
 	}
-	else SaveStateError(app, "opening IFF stream", ERROR_NO_FREE_STORE);
+	else StateError(app, "opening IFF stream for write", ERROR_NO_FREE_STORE);
 }
 
 /*--------------------------------------------------------------------------*/
@@ -132,6 +123,6 @@ void SaveState(struct App *app)
 		SaveState2(app, output);
 		Close(output);
 	}
-	else SaveStateError(app, "opening file", IoErr());
+	else StateError(app, "opening file for write", IoErr());
 }
 

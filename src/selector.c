@@ -162,10 +162,12 @@ void OpenSelector(struct Window *mainwin, struct Selector *selector)
 	Scroller.SpecialInfo = &ScrProp;
 
 	if (selector->Win = OpenWindowTags(NULL,
+		WA_Top, selector->SelWinPos.y,
+		WA_Left, selector->SelWinPos.x,
 		WA_Width, selector->TotalWidth,
 		WA_MinWidth, selector->TotalWidth,
 		WA_MaxWidth, selector->TotalWidth,
-		WA_Height, 400,
+		WA_Height, selector->SelWinPos.h,
 		WA_MinHeight, 100,
 		WA_MaxHeight, 1024,
 		WA_DragBar, TRUE,
