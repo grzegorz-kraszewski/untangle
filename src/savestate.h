@@ -1,0 +1,1 @@
+void SaveState(struct App *app);

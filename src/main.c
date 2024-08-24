@@ -19,6 +19,7 @@ struct Library
 #include "menu.h"
 #include "strutils.h"
 #include "version.h"
+#include "savestate.h"
 
 STRPTR DefScreenTitle = "Untangle " VERSION " by RastPort " RELYEAR;
 STRPTR DefWindowTitle = "Untangle";
@@ -142,6 +143,7 @@ void TheLoop(struct App *app)
 									app->Level = NULL;
 									app->LevelNumber++;
 									NewGame(app);
+									SaveState(app);
 								}
 							}
 						}
@@ -339,6 +341,15 @@ static LONG OpenMyWindow(struct App *app)
 
 	if (wb = LockPubScreen(NULL))
 	{
+		// Default values for selector window position
+		// stored to the game state when selector window
+		// is never opened.
+
+		app->Selector.SelWinPos.x = 0;
+		app->Selector.SelWinPos.y = wb->BarHeight + 1;
+		app->Selector.SelWinPos.w = 200;
+		app->Selector.SelWinPos.h = 400;
+
 		wintags[2].ti_Data = CalculateMinWidth(app, wb);
 		wintags[16].ti_Data = wb->BarHeight + 1;
 		app->Win = OpenWindowTagList(NULL, wintags);
@@ -348,6 +359,7 @@ static LONG OpenMyWindow(struct App *app)
 		{
 			StoreWindowPosition(app->Win, &app->MainWinPos);
 			err = GetScreenFont(app);
+			SaveState(app);
 			if (app->Selector.Win) CloseWindow(app->Selector.Win);
 			CloseWindow(app->Win);
 		}
