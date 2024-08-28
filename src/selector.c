@@ -90,7 +90,7 @@ void SelectorLayout(struct Window *mainwin, struct Selector *selector)
 	selector->MovesLabelX = selector->MovesREdge - len_moves;
 	selector->InnerWidth = selector->MovesREdge + unit;
 	selector->TotalWidth = selector->InnerWidth + mainwin->BorderRight;
-	selector->FirstEntry = 0;
+	selector->FirstEntry = 0x7FFF;
 
 	InsertFirstUnsolved(selector);
 }
