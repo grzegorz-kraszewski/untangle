@@ -130,6 +130,7 @@ struct App
 	struct WBArg LevelSetFile;
 	WORD DotWidth;                     /* pixels */
 	WORD DotHeight;                    /* pixels */
+	BOOL TimerUsed;
 	struct MsgPort *TimerPort;
 	struct timerequest *TimerReq;
 	struct GameTime LevelTime;

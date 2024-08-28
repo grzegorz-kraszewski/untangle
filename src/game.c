@@ -445,8 +445,11 @@ static void PrintLevelInfo(struct App *app)
 
 void StopTimer(struct App *app)
 {
-	AbortIO(&app->TimerReq->tr_node);
-	WaitIO(&app->TimerReq->tr_node);
+	if (app->TimerUsed)
+	{
+		AbortIO(&app->TimerReq->tr_node);
+		WaitIO(&app->TimerReq->tr_node);
+	}
 }
 
 /*---------------------------------------------------------------------------*/
@@ -465,6 +468,7 @@ void PushNextSecond(struct App *app, BOOL redraw)
 	app->NextSecond.tv_secs++;
 	app->TimerReq->tr_node.io_Command = TR_ADDREQUEST;
 	app->TimerReq->tr_time = app->NextSecond;
+	app->TimerUsed = TRUE;
 	SendIO(&app->TimerReq->tr_node);
 }
 

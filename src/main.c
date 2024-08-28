@@ -396,9 +396,9 @@ static LONG GetTimer(struct App *app)
 			if (OpenDevice("timer.device", UNIT_WAITUNTIL, &app->TimerReq->tr_node, 0) == 0)
 			{
 				TimerBase = &app->TimerReq->tr_node.io_Device->dd_Library;
+				app->TimerUsed = FALSE;
 				err = OpenMyWindow(app);
-				AbortIO(&app->TimerReq->tr_node);
-				WaitIO(&app->TimerReq->tr_node);
+				StopTimer(app);
 				CloseDevice(&app->TimerReq->tr_node);
 			}
 
