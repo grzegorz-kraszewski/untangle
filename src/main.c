@@ -63,7 +63,7 @@ inline void StoreWindowPosition(struct Window *win, struct WinPosRecord *rec)
 
 static void ChangeLevel(struct App *app, LONG level)
 {
-	if ((app->Level->MoveCount > 0) && UserRejectsLevelChange(app)) return;
+	if (app->Level && (app->Level->MoveCount > 0) && UserRejectsLevelChange(app)) return;
 	StopTimer(app);
 	EraseGame(app);
 	UnloadLevel(app->Level);
