@@ -32,6 +32,7 @@ struct Selector
 {
 	struct Window *Win;
 	STRPTR WinTitle;
+	STRPTR ScreenTitle;                /* the same as app->DynamicScreenTitle */
 	struct TextFont *Font;
 	ULONG SigMask;
 	APTR HighScorePool;

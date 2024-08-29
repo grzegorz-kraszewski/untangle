@@ -175,7 +175,7 @@ void OpenSelector(struct Window *mainwin, struct Selector *selector)
 		WA_DepthGadget, TRUE,
 		WA_SizeGadget, TRUE,
 		WA_Title, selector->WinTitle,
-		//WA_ScreenTitle, app->DynamicScreenTitle,
+		WA_ScreenTitle, selector->ScreenTitle,
 		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_GADGETUP | IDCMP_GADGETDOWN |
 			IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS | IDCMP_CHANGEWINDOW,
 		WA_Gadgets, (ULONG)&Scroller,
