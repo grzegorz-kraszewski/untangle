@@ -254,7 +254,11 @@ LONG HandleSelector(struct Selector *selector)
 			break;
 
 			case IDCMP_GADGETDOWN:
-				if (imsg->IAddress == &Scroller) selector->ScrollerActive = TRUE;
+				if (imsg->IAddress == &Scroller)
+				{
+					selector->ScrollerActive = TRUE;
+					ScrollContent(selector);
+				}
 			break;
 
 			case IDCMP_MOUSEMOVE:
@@ -440,7 +444,7 @@ void HighScoreLevelCompleted(struct Selector *selector, LONG level, LONG seconds
 
 	if (!hscore) return; /* panic, should never happen */
 
-	if (BestScore(hscore, seconds, moves)) selector->FirstEntry++;
+	if (BestScore(hscore, seconds, moves)) selector->FirstEntry++; /* WTF is this? */
 	InsertFirstUnsolved(selector);
 	SelectorRefresh(selector);
 }
