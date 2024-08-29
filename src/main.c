@@ -426,7 +426,7 @@ static LONG GetUntanglePrefs(struct App *app, struct WBStartup *wbmsg)
 			LONG dotsize;
 			STRPTR value;
 
-			value = FindToolType(dobj->do_ToolTypes, "DOTSIZE");
+			value = FindToolType((CONST_STRPTR*)dobj->do_ToolTypes, "DOTSIZE");
 
 			if (value)
 			{
