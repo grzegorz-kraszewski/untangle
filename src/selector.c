@@ -348,7 +348,7 @@ static void PrintHighScoreLine(struct Selector *selector, struct HighScore *hs, 
 	Move(rp, x, y);
 	Text(rp, outbuf, txtlen);
 	
-	if ((p[0] = hs->Seconds) == THE_WORST_TIME_POSSIBLE) StrCopy("--", outbuf);
+	if (hs->Seconds == THE_WORST_TIME_POSSIBLE) StrCopy("--", outbuf);
 	else SecondsToTime(hs->Seconds, outbuf);
 	txtlen = StrLen(outbuf);	
 	x = selector->TimeREdge - TextLength(rp, outbuf, txtlen);
