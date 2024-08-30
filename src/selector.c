@@ -84,7 +84,7 @@ void SelectorLayout(struct Window *mainwin, struct Selector *selector)
 	
 	selector->LevelREdge = mainwin->BorderLeft + unit + len_level;
 	selector->LevelLabelX = selector->LevelREdge - len_level;
-	selector->TimeREdge = selector->LevelREdge + unit + TextLength(rp, "00:00", 5);
+	selector->TimeREdge = selector->LevelREdge + unit + TextLength(rp, " 00:00", 6);
 	selector->TimeLabelX = selector->TimeREdge - len_time;
 	selector->MovesREdge = selector->TimeREdge + unit + TextLength(rp, "00000", 5);
 	selector->MovesLabelX = selector->MovesREdge - len_moves;
@@ -316,6 +316,21 @@ static void EraseHighScoreLine(struct Selector *selector, WORD y)
 
 /*--------------------------------------------------------------------------------------------*/
 
+static void SecondsToTime(LONG time, UBYTE *buf)
+{
+	LONG p[2];
+
+	if (time < 6000)
+	{
+		p[0] = div16(time, 60);
+		p[1] = time - mul16(p[0], 60);
+		VFmtPut(buf, "%ld:%02ld", p);
+	}
+	else StrCopy("--:--", buf);
+}
+
+/*--------------------------------------------------------------------------------------------*/
+
 static void PrintHighScoreLine(struct Selector *selector, struct HighScore *hs, LONG lvl,
  WORD y)
 {
@@ -334,7 +349,7 @@ static void PrintHighScoreLine(struct Selector *selector, struct HighScore *hs, 
 	Text(rp, outbuf, txtlen);
 	
 	if ((p[0] = hs->Seconds) == THE_WORST_TIME_POSSIBLE) StrCopy("--", outbuf);
-	else VFmtPut(outbuf, "%ld", p);
+	else SecondsToTime(hs->Seconds, outbuf);
 	txtlen = StrLen(outbuf);	
 	x = selector->TimeREdge - TextLength(rp, outbuf, txtlen);
 	Move(rp, x, y);
