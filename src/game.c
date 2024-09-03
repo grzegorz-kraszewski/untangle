@@ -381,6 +381,7 @@ void UpdateInfosAfterLevelLoad(struct App *app)
 	{
 		if (app->DynamicScreenTitle) StrFree(app->DynamicScreenTitle);
 		app->DynamicScreenTitle = title;
+		app->Selector.ScreenTitle = title;
 	}
 
 	if (title = FmtNew("Untangle: %s, Level %ld", (LONG)app->Level->LevelSetName,
@@ -390,7 +391,7 @@ void UpdateInfosAfterLevelLoad(struct App *app)
 		app->DynamicWindowTitle = title;
 	}
 
-	if (title = FmtNew("Untangle: %s", (LONG)app->Level->LevelSetName))
+	if (title = StrClone("Untangle"))
 	{
 		if (app->Selector.WinTitle) StrFree(app->Selector.WinTitle);
 		app->Selector.WinTitle = title;
@@ -445,8 +446,11 @@ static void PrintLevelInfo(struct App *app)
 
 void StopTimer(struct App *app)
 {
-	AbortIO(&app->TimerReq->tr_node);
-	WaitIO(&app->TimerReq->tr_node);
+	if (app->TimerUsed)
+	{
+		AbortIO(&app->TimerReq->tr_node);
+		WaitIO(&app->TimerReq->tr_node);
+	}
 }
 
 /*---------------------------------------------------------------------------*/
@@ -465,6 +469,7 @@ void PushNextSecond(struct App *app, BOOL redraw)
 	app->NextSecond.tv_secs++;
 	app->TimerReq->tr_node.io_Command = TR_ADDREQUEST;
 	app->TimerReq->tr_time = app->NextSecond;
+	app->TimerUsed = TRUE;
 	SendIO(&app->TimerReq->tr_node);
 }
 

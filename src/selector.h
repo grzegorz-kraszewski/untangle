@@ -8,6 +8,14 @@
 #include <intuition/screens.h>
 #include <intuition/intuition.h>
 
+struct WinPosRecord
+{
+	WORD x;
+	WORD y;
+	WORD w;
+	WORD h;
+};
+
 struct HighScore
 {
 	struct MinNode Node;
@@ -24,6 +32,7 @@ struct Selector
 {
 	struct Window *Win;
 	STRPTR WinTitle;
+	STRPTR ScreenTitle;                /* the same as app->DynamicScreenTitle */
 	struct TextFont *Font;
 	ULONG SigMask;
 	APTR HighScorePool;
@@ -42,6 +51,7 @@ struct Selector
 	WORD TotalWidth;
 	WORD ListYStart;
 	WORD LineHeight;
+	struct WinPosRecord SelWinPos;
 };
 
 void SelectorLayout(struct Window *mainwin, struct Selector *selector);

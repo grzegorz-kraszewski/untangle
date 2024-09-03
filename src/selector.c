@@ -84,13 +84,13 @@ void SelectorLayout(struct Window *mainwin, struct Selector *selector)
 	
 	selector->LevelREdge = mainwin->BorderLeft + unit + len_level;
 	selector->LevelLabelX = selector->LevelREdge - len_level;
-	selector->TimeREdge = selector->LevelREdge + unit + TextLength(rp, "00:00", 5);
+	selector->TimeREdge = selector->LevelREdge + unit + TextLength(rp, " 00:00", 6);
 	selector->TimeLabelX = selector->TimeREdge - len_time;
 	selector->MovesREdge = selector->TimeREdge + unit + TextLength(rp, "00000", 5);
 	selector->MovesLabelX = selector->MovesREdge - len_moves;
 	selector->InnerWidth = selector->MovesREdge + unit;
 	selector->TotalWidth = selector->InnerWidth + mainwin->BorderRight;
-	selector->FirstEntry = 0;
+	selector->FirstEntry = 0x7FFF;
 
 	InsertFirstUnsolved(selector);
 }
@@ -162,10 +162,12 @@ void OpenSelector(struct Window *mainwin, struct Selector *selector)
 	Scroller.SpecialInfo = &ScrProp;
 
 	if (selector->Win = OpenWindowTags(NULL,
+		WA_Top, selector->SelWinPos.y,
+		WA_Left, selector->SelWinPos.x,
 		WA_Width, selector->TotalWidth,
 		WA_MinWidth, selector->TotalWidth,
 		WA_MaxWidth, selector->TotalWidth,
-		WA_Height, 400,
+		WA_Height, selector->SelWinPos.h,
 		WA_MinHeight, 100,
 		WA_MaxHeight, 1024,
 		WA_DragBar, TRUE,
@@ -173,14 +175,15 @@ void OpenSelector(struct Window *mainwin, struct Selector *selector)
 		WA_DepthGadget, TRUE,
 		WA_SizeGadget, TRUE,
 		WA_Title, selector->WinTitle,
-		//WA_ScreenTitle, app->DynamicScreenTitle,
+		WA_ScreenTitle, selector->ScreenTitle,
 		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_GADGETUP | IDCMP_GADGETDOWN |
-			IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS,
+			IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS | IDCMP_CHANGEWINDOW,
 		WA_Gadgets, (ULONG)&Scroller,
 		WA_NewLookMenus, TRUE,
 		WA_Activate, TRUE,
 	TAG_END))
 	{
+		StoreWindowPosition(selector->Win, &selector->SelWinPos);
 		selector->SigMask = 1 << selector->Win->UserPort->mp_SigBit;
 		selector->ScrollerActive = FALSE;
 		SelectorRefresh(selector);
@@ -251,7 +254,11 @@ LONG HandleSelector(struct Selector *selector)
 			break;
 
 			case IDCMP_GADGETDOWN:
-				if (imsg->IAddress == &Scroller) selector->ScrollerActive = TRUE;
+				if (imsg->IAddress == &Scroller)
+				{
+					selector->ScrollerActive = TRUE;
+					ScrollContent(selector);
+				}
 			break;
 
 			case IDCMP_MOUSEMOVE:
@@ -261,6 +268,10 @@ LONG HandleSelector(struct Selector *selector)
 			case IDCMP_MOUSEBUTTONS:
 				if (imsg->Code == SELECTDOWN)
 					result = HandleClick(selector, imsg->MouseX, imsg->MouseY);
+			break;
+
+			case IDCMP_CHANGEWINDOW:
+				StoreWindowPosition(selector->Win, &selector->SelWinPos);
 			break;
 		}
 
@@ -305,6 +316,21 @@ static void EraseHighScoreLine(struct Selector *selector, WORD y)
 
 /*--------------------------------------------------------------------------------------------*/
 
+static void SecondsToTime(LONG time, UBYTE *buf)
+{
+	LONG p[2];
+
+	if (time < 6000)
+	{
+		p[0] = div16(time, 60);
+		p[1] = time - mul16(p[0], 60);
+		VFmtPut(buf, "%ld:%02ld", p);
+	}
+	else StrCopy("--:--", buf);
+}
+
+/*--------------------------------------------------------------------------------------------*/
+
 static void PrintHighScoreLine(struct Selector *selector, struct HighScore *hs, LONG lvl,
  WORD y)
 {
@@ -322,8 +348,8 @@ static void PrintHighScoreLine(struct Selector *selector, struct HighScore *hs, 
 	Move(rp, x, y);
 	Text(rp, outbuf, txtlen);
 	
-	if ((p[0] = hs->Seconds) == THE_WORST_TIME_POSSIBLE) StrCopy("--", outbuf);
-	else VFmtPut(outbuf, "%ld", p);
+	if (hs->Seconds == THE_WORST_TIME_POSSIBLE) StrCopy("--", outbuf);
+	else SecondsToTime(hs->Seconds, outbuf);
 	txtlen = StrLen(outbuf);	
 	x = selector->TimeREdge - TextLength(rp, outbuf, txtlen);
 	Move(rp, x, y);
@@ -433,7 +459,7 @@ void HighScoreLevelCompleted(struct Selector *selector, LONG level, LONG seconds
 
 	if (!hscore) return; /* panic, should never happen */
 
-	if (BestScore(hscore, seconds, moves)) selector->FirstEntry++;
+	if (BestScore(hscore, seconds, moves)) selector->FirstEntry++; /* WTF is this? */
 	InsertFirstUnsolved(selector);
 	SelectorRefresh(selector);
 }

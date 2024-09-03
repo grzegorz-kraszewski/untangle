@@ -112,7 +112,6 @@ struct GameTime
 	UWORD Sec;
 };
 
-
 struct App
 {
 	struct Window *Win;
@@ -131,12 +130,17 @@ struct App
 	struct WBArg LevelSetFile;
 	WORD DotWidth;                     /* pixels */
 	WORD DotHeight;                    /* pixels */
+	BOOL TimerUsed;
 	struct MsgPort *TimerPort;
 	struct timerequest *TimerReq;
 	struct GameTime LevelTime;
 	struct timeval LevelStart;
 	struct timeval NextSecond;
 	struct Selector Selector;
+	struct WinPosRecord MainWinPos;
 };
 
+inline void StoreWindowPosition(struct Window *win, struct WinPosRecord *rec);
+
+ 
 #endif  /* UNTANGLE_MAIN_H */

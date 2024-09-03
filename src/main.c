@@ -19,6 +19,8 @@ struct Library
 #include "menu.h"
 #include "strutils.h"
 #include "version.h"
+#include "savestate.h"
+
 
 STRPTR DefScreenTitle = "Untangle " VERSION " by RastPort " RELYEAR;
 STRPTR DefWindowTitle = "Untangle";
@@ -49,9 +51,19 @@ static BOOL UserRejectsLevelChange(struct App *app)
 
 /*---------------------------------------------------------------------------*/
 
+inline void StoreWindowPosition(struct Window *win, struct WinPosRecord *rec)
+{
+	rec->x = win->LeftEdge;
+	rec->y = win->TopEdge;
+	rec->w = win->Width;
+	rec->h = win->Height;
+}
+
+/*---------------------------------------------------------------------------*/
+
 static void ChangeLevel(struct App *app, LONG level)
 {
-	if ((app->Level->MoveCount > 0) && UserRejectsLevelChange(app)) return;
+	if (app->Level && (app->Level->MoveCount > 0) && UserRejectsLevelChange(app)) return;
 	StopTimer(app);
 	EraseGame(app);
 	UnloadLevel(app->Level);
@@ -82,7 +94,9 @@ void TheLoop(struct App *app)
 
 		if (signals & app->Selector.SigMask)
 		{
-			LONG newlevel = HandleSelector(&app->Selector);
+			LONG newlevel;
+
+			newlevel = HandleSelector(&app->Selector);
 			if (newlevel != NO_LEVEL_CHANGE) ChangeLevel(app, newlevel);
 		}
 
@@ -132,6 +146,7 @@ void TheLoop(struct App *app)
 									app->Level = NULL;
 									app->LevelNumber++;
 									NewGame(app);
+									SaveState(app);
 								}
 							}
 						}
@@ -142,6 +157,10 @@ void TheLoop(struct App *app)
 						{
 							GameDotDrag(app, imsg->MouseX, imsg->MouseY);
 						}
+					break;
+
+					case IDCMP_CHANGEWINDOW:
+						StoreWindowPosition(app->Win, &app->MainWinPos);
 					break;
 				}
 
@@ -307,9 +326,11 @@ struct TagItem wintags[] = {
 	{ WA_Title, 0 /* DefWindowTitle */ },
 	{ WA_ScreenTitle, 0 /* DefScreenTitle */ },
 	{ WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_MENUPICK | IDCMP_NEWSIZE | IDCMP_MOUSEBUTTONS
-	  | IDCMP_MOUSEMOVE | IDCMP_SIZEVERIFY },
+	  | IDCMP_MOUSEMOVE | IDCMP_SIZEVERIFY | IDCMP_CHANGEWINDOW },
 	{ WA_NewLookMenus, TRUE },
 	{ WA_Activate, TRUE },
+	{ WA_Left, 0 },
+	{ WA_Top, 0 },
 	{ TAG_END, 0 }
 };
 
@@ -323,13 +344,36 @@ static LONG OpenMyWindow(struct App *app)
 
 	if (wb = LockPubScreen(NULL))
 	{
+		// Default values for selector window position.
+
+		app->Selector.SelWinPos.x = 0;
+		app->Selector.SelWinPos.y = wb->BarHeight + 1;
+		app->Selector.SelWinPos.w = 200;
+		app->Selector.SelWinPos.h = 400;
+
+		// Default values for main window position.
+
+		app->MainWinPos.x = 0;
+		app->MainWinPos.y = wb->BarHeight + 1;
+		app->MainWinPos.w = 400;
+		app->MainWinPos.h = 400;
+
+		LoadState(app);
+
+		wintags[15].ti_Data = app->MainWinPos.x;
+		wintags[16].ti_Data = app->MainWinPos.y;
+		wintags[0].ti_Data = app->MainWinPos.w;
+		wintags[1].ti_Data = app->MainWinPos.h;
+
 		wintags[2].ti_Data = CalculateMinWidth(app, wb);
 		app->Win = OpenWindowTagList(NULL, wintags);
 		UnlockPubScreen(NULL, wb);
 
 		if (app->Win)
 		{
+			StoreWindowPosition(app->Win, &app->MainWinPos);
 			err = GetScreenFont(app);
+			SaveState(app);
 			if (app->Selector.Win) CloseWindow(app->Selector.Win);
 			CloseWindow(app->Win);
 		}
@@ -352,9 +396,9 @@ static LONG GetTimer(struct App *app)
 			if (OpenDevice("timer.device", UNIT_WAITUNTIL, &app->TimerReq->tr_node, 0) == 0)
 			{
 				TimerBase = &app->TimerReq->tr_node.io_Device->dd_Library;
+				app->TimerUsed = FALSE;
 				err = OpenMyWindow(app);
-				AbortIO(&app->TimerReq->tr_node);
-				WaitIO(&app->TimerReq->tr_node);
+				StopTimer(app);
 				CloseDevice(&app->TimerReq->tr_node);
 			}
 
@@ -382,7 +426,7 @@ static LONG GetUntanglePrefs(struct App *app, struct WBStartup *wbmsg)
 			LONG dotsize;
 			STRPTR value;
 
-			value = FindToolType(dobj->do_ToolTypes, "DOTSIZE");
+			value = FindToolType((CONST_STRPTR*)dobj->do_ToolTypes, "DOTSIZE");
 
 			if (value)
 			{
