@@ -1,0 +1,146 @@
+@DATABASE Untangle.guide
+@$VER: Untangle.guide 1.0 (03.09.2024)
+@AUTHOR: RastPort
+@WIDTH 80
+@SMARTWRAP
+@NODE Main "Untangle"
+
+
+@{JCENTER}@{B}Untangle 1.0@{UB}
+
+@{JLEFT}
+
+Untangle is a logic game in a window of Workbench screen. Each level consists
+of a set of dots connected by lines. Lines have a lot of intersections. The
+player task is to move dots with mouse to untangle the lines, so there are no
+intersections.
+
+
+  @{" Requirements            " LINK Requirements}
+
+  @{" Installation            " LINK Installation}
+
+  @{" Configuration           " LINK Configuration}
+
+  @{" Program Menu            " LINK Menu}
+
+  @{" How to Play             " Link HowToPlay}
+
+  @{" Highscore Table         " Link HighscoreTable}
+
+  @{" Game Saving and Loading " LINK GameSaving}
+
+  @{" Open Source             " LINK OpenSource}
+
+
+@ENDNODE
+@NODE Requirements "Requirements"
+@{B}Requirements@{UB}
+
+
+Untangle requires AmigaOS version 3.0 or newer. It also uses a few system
+libraries, but all of them are delivered with the system.
+
+
+The game also runs on AmigaOS 4, MorphOS and AROS, using their emulation
+of M680x0 processors.
+@ENDNODE
+@NODE Installation "Installation"@{B}8SVX@{UB}
+@{B}Installation@{UB}
+
+
+No special installation required. Just copy the game directory somewehere.
+Make sure that file "StandardSet.iff" containing game levels is located in
+the same drawer as the game.
+
+
+Alternative game icons are stored in "icons" drawer. Icon change may be done
+manually.
+@ENDNODE
+@NODE Configuration "Configuration"
+@{B}Configuration@{UB}
+
+
+Untangle has 6 sizes of a dot available. Dot size is configured with DOTSIZE
+icon tooltype. It may be changed in the icon information window of Workbench.
+@ENDNODE
+@NODE HowToPlay "How to Play"
+@{B}How to Play@{UB}
+
+
+When started, Untangle automatically loads the first unsolved level. It will be
+level 1 after fresh installation. Dots can be dragged with mouse using the left
+button. Number of intersections to be untangled, number of moves made and level
+time are shown on the bar at bottom.
+
+
+Level is solved, when there are no intersections. Then the game blinks the
+screen, pauses for a second, and loads the next level.
+
+
+After the last level of a set is completed, a requester with text "no more
+levels in set" is displayed.
+
+
+A level is accessible after all the previous levels of set have been solved.
+Solved levels may be attempted again by choosing them from the
+@{"highscore table" LINK HighscoreTable}.
+
+@ENDNODE
+@NODE HighscoreTable "Highscore Table"
+@{B}Highscore Table@{UB}
+
+
+Untangle keeps the best time and best number of moves for each level. The table
+is shown in a separate window, which also works as a level selector.
+
+
+Highscore table is opened from "Level Selector..." @{"menu item" LINK Menu}.
+
+
+Clicking on an entry in the list loads clicked level, so it can be played
+again. The first unsolved level is available at the end of list.
+
+
+If the player selects a level from the list, but currently played level has
+some moves made, a confirmation requester is displayed.
+@ENDNODE
+@NODE GameSaving "Game Saving and Loading"
+@{B}Game Saving and Loading@{UB}
+
+
+Untangle automatically loads and saves the @{"highscore table" LINK HighscoreTable}. The game state is
+stored in "Untangle.state" file in the game drawer. The file is created
+automatically if it does not exist.
+
+
+The state is loaded at program start. It is saved after every solved level and
+when quitting the program.
+
+
+Dimensions and positions of the main game window and level selector window are
+stored in the file as well.
+@ENDNODE
+@NODE Menu "Menu"
+@{B}Program Menu@{UB}
+
+
+Project
+
+  @{B}New Game@{UB}          (LAmiga + n) - Loads level 1. Does not clear highscores.
+
+  @{B}Level Selector...@{UB} (LAmiga + l) - Opens @{"highscore table" LINK HighscoreTable} (level selector).
+
+  @{B}Save Level...@{UB}     (LAmiga + s) - Saves current level to a file.
+
+  @{B}Quit@{UB}              (LAmiga + q) - Quits the game.
+@ENDNODE
+@NODE OpenSource "Open source"
+@{B}OpenSource@{UB}
+
+
+Untangle is an open source project. It is hosted on GitHub.
+
+
+https://github.com/grzegorz-kraszewski/untangle
+@ENDNODE
