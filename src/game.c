@@ -77,16 +77,16 @@ void DrawDots(struct RastPort *rp, struct App *app)
 
 	ForEachFwd(&app->Level->DotList, struct GameDot, gd)
 	{
-		BltTemplate(app->DotRaster, 0, 2, rp, gd->Pixel.x - dotradius_x, gd->Pixel.y -
-			dotradius_y, app->DotWidth, app->DotHeight);
+		BltTemplate((CONST PLANEPTR)app->DotRaster, 0, 2, rp, gd->Pixel.x - dotradius_x,
+			gd->Pixel.y - dotradius_y, app->DotWidth, app->DotHeight);
 	}
 
 	SetAPen(rp, 2);
 
 	ForEachFwd(&app->Level->DotList, struct GameDot, gd)
 	{
-		BltTemplate(&app->DotRaster[app->DotHeight], 0, 2, rp, gd->Pixel.x - dotradius_x, gd->Pixel.y -
-			dotradius_y, app->DotWidth, app->DotHeight);
+		BltTemplate((CONST PLANEPTR)&app->DotRaster[app->DotHeight], 0, 2, rp, gd->Pixel.x - dotradius_x,
+			gd->Pixel.y - dotradius_y, app->DotWidth, app->DotHeight);
 	}
 
 }
@@ -99,8 +99,6 @@ static void DrawInfoBar(struct App *app)
 	WORD xs = app->Win->BorderLeft;
 	WORD xe = app->Win->Width - app->Win->BorderRight - 1;
 	WORD y = app->InfoBarY;
-	ULONG chars;
-	struct TextExtent te;
 
 	SetAPen(rp, 1);
 	SetFont(rp, app->InfoFont);
@@ -488,7 +486,7 @@ static void StartTimer(struct App *app)
 
 void NewGame(struct App *app)
 {
-	BPTR olddir;
+	BPTR olddir = NULL;
 
 	app->LevelTime.Min = 0;
 	app->LevelTime.Sec = 0;
