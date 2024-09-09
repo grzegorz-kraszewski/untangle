@@ -9,6 +9,9 @@
 
 void StateError(struct App *app, STRPTR opdesc, LONG ecode)
 {
+	app = app;   // this argument will be used, when error will be displayed
+	             // in a requester
+
 	Printf("Save state error: '%s' error code %ld.\n", opdesc, ecode);
 }
 
