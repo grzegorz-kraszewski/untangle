@@ -148,7 +148,6 @@ static LONG LoadLevelData(struct GameLevel *gl, struct IFFHandle *handle)
 	BOOL have_lines = FALSE;
 	BOOL have_dots = FALSE;
 	struct ContextNode *curch;
-	UBYTE strid[5];
 
 	StopChunk(handle, ID_UNTG, ID_DOTS);
 	StopChunk(handle, ID_UNTG, ID_LINE);
@@ -210,8 +209,6 @@ APTR CopyProperty(struct IFFHandle *handle, ULONG type, ULONG id)
 
 void StoreLevelProperties(struct GameLevel *gl, struct IFFHandle *handle)
 {
-	struct StoredProperty *sp;
-
 	/* Properties are optional, so when they are missing, or cannot be copied */
 	/* due to lack of free memory, it is not fatal.                           */
 
@@ -228,11 +225,6 @@ static LONG SkipToLevel(struct GameLevel *gl, struct IFFHandle *handle, LONG lev
 
 	if ((err = OpenIFF(handle, IFFF_READ)) == 0)
 	{
-		BOOL have_lines = FALSE;
-		BOOL have_dots = FALSE;
-		struct ContextNode *curch;
-		UBYTE strid[5];
-
 		if (!(err = PropChunks(handle, propchunks, 2)))
 		{
 			StopChunk(handle, ID_UNTG, ID_FORM);
