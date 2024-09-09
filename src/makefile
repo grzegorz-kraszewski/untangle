@@ -25,11 +25,10 @@ game.o: game.c main.h selector.h loader.h lscm.h strutils.h version.h
 loader.o: loader.c loader.h main.h selector.h strutils.h
 loadstate.o: loadstate.c main.h selector.h savestate.h
 lscm.o: lscm.c lscm.h main.h selector.h
-main.o: main.c main.h selector.h menu.h strutils.h version.h savestate.h
-menu.o: menu.c main.h selector.h game.h
+main.o: main.c main.h selector.h menu.h game.h strutils.h version.h savestate.h loader.h
+menu.o: menu.c main.h selector.h game.h loader.h savelevel.h
 savelevel.o: savelevel.c savelevel.h main.h selector.h loader.h
 savestate.o: savestate.c main.h selector.h savestate.h
-selector.o: selector.c main.h selector.h
+selector.o: selector.c main.h selector.h strutils.h
 start.o: start.c version.h
 strutils.o: strutils.c strutils.h
-
