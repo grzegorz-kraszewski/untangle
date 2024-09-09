@@ -17,9 +17,11 @@ struct Library
 
 #include "main.h"
 #include "menu.h"
+#include "game.h"
 #include "strutils.h"
 #include "version.h"
 #include "savestate.h"
+#include "loader.h"
 
 
 STRPTR DefScreenTitle = "Untangle " VERSION " by RastPort " RELYEAR;
@@ -183,7 +185,7 @@ void TheLoop(struct App *app)
 BOOL RectVertPixels(struct App *app)
 {
 	struct DrawInfo *dri;
-	WORD pcf;
+	WORD pcf = 8;               // assume square pixels
 
 	if (dri = GetScreenDrawInfo(app->Win->WScreen))
 	{
@@ -300,7 +302,7 @@ static LONG GetScreenFont(struct App *app)
 
 /*---------------------------------------------------------------------------*/
 /* Minimum window width is determined by pixel length of text in the info    */
-/* bar. 
+/* bar.                                                                      */
 /*---------------------------------------------------------------------------*/
 
 LONG CalculateMinWidth(struct App *app, struct Screen *wb)
@@ -520,7 +522,7 @@ static STRPTR StartupErrorMessages[] = {
 };
 
 
-static void ReportStartupError(err)
+static void ReportStartupError(LONG err)
 {
 	/*-------------------------------------------------------------*/
 	/* In case of fail to open Kickstart libraries (error code 1), */
@@ -533,7 +535,7 @@ static void ReportStartupError(err)
 
 /*---------------------------------------------------------------------------*/
 
-static void *HandleWorkbenchArgs(struct App *app, struct WBStartup *wbmsg)
+static void HandleWorkbenchArgs(struct App *app, struct WBStartup *wbmsg)
 {
 	/* If WBArg[1] is present, it means either Untangle has been used as      */
 	/* a default tool of level set icon, or shift-clicked with level set icon */
