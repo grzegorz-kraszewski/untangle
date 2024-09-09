@@ -141,6 +141,6 @@ struct App
 };
 
 inline void StoreWindowPosition(struct Window *win, struct WinPosRecord *rec);
-
+void TheLoop(struct App *app);
  
 #endif  /* UNTANGLE_MAIN_H */
