@@ -67,7 +67,6 @@ static void ParseState(struct App *app, struct IFFHandle *in)
 {
 	LONG err;
 	struct ContextNode *curch;
-	UBYTE strid[5];
 
 	StopChunk(in, ID_UNTG, ID_HSCR);
 	StopChunk(in, ID_UNTG, ID_WINP);
