@@ -350,7 +350,7 @@ void UnloadLevel(struct GameLevel *gl)
 
 /*---------------------------------------------------------------------------*/
 
-struct GameLevel* LoadLevel(struct Window *gwin, LONG level, STRPTR filename)
+struct GameLevel* LoadLevel(struct Window *gwin, LONG level, STRPTR filename, BOOL *endgame)
 {
 	struct GameLevel *gl;
 	LONG err = LERR_OUT_OF_MEMORY;
@@ -372,7 +372,8 @@ struct GameLevel* LoadLevel(struct Window *gwin, LONG level, STRPTR filename)
 
 	if (err)
 	{
-		ReportLoadError(gwin, err);
+		if (err == LERR_NO_SUCH_LEVEL) *endgame = TRUE;
+		else ReportLoadError(gwin, err);
 		UnloadLevel(gl);
 		gl = NULL;
 	}

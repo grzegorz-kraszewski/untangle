@@ -3,6 +3,7 @@
 #include "lscm.h"
 #include "strutils.h"
 #include "version.h"
+#include "endgame.h"
 
 #include <proto/exec.h>
 #include <proto/graphics.h>
@@ -487,12 +488,13 @@ static void StartTimer(struct App *app)
 void NewGame(struct App *app)
 {
 	BPTR olddir = NULL;
+	BOOL endgame = FALSE;
 
 	app->LevelTime.Min = 0;
 	app->LevelTime.Sec = 0;
 	if (app->LevelSetFile.wa_Lock) olddir = CurrentDir(app->LevelSetFile.wa_Lock);
 
-	if (app->Level = LoadLevel(app->Win, app->LevelNumber, app->LevelSetFile.wa_Name))
+	if (app->Level = LoadLevel(app->Win, app->LevelNumber, app->LevelSetFile.wa_Name, &endgame))
 	{
 		PrecalculateLevel(app->Level);
 		ScaleGame(app);
@@ -500,6 +502,7 @@ void NewGame(struct App *app)
 		DrawGame(app);
 		StartTimer(app);
 	}
+	else if (endgame) EndGame(app);
 
 	if (app->LevelSetFile.wa_Lock) CurrentDir(olddir);
 }
