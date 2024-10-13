@@ -11,6 +11,7 @@
 #define ID_AUTH MAKE_ID('A','U','T','H')
 
 struct GameLevel *LoadLevel(struct Window *gamewin, LONG level, STRPTR filename);
+void UnloadLevel(struct GameLevel *gl);
 
 /*---------------------*/
 /* loading error codes */

@@ -1,6 +1,8 @@
 #include "main.h"
 #include "game.h"
 #include "selector.h"
+#include "loader.h"
+#include "savelevel.h"
 
 #include <proto/intuition.h>
 #include <proto/gadtools.h>

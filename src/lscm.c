@@ -80,8 +80,6 @@ static BOOL SegmentIntersectsLine(struct GameLine *segment, struct GameLine *lin
 }
 
 /*---------------------------------------------------------------------------*/
-/* 
-/*---------------------------------------------------------------------------*/
 
 static BOOL IntersectionTest(struct GameLine *glia, struct GameLine *glib)
 {

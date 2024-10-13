@@ -3,6 +3,7 @@
 /*-----------------------------------*/
 
 #include "main.h"
+#include "strutils.h"
 
 #include <proto/exec.h>
 #include <proto/intuition.h>
@@ -20,9 +21,9 @@
 
 void PrintHighScores(struct Selector *selector);
 
-struct Image ScrRender = {0};
-struct PropInfo ScrProp = {0};
-struct Gadget Scroller = {0};
+struct Image ScrRender;
+struct PropInfo ScrProp;
+struct Gadget Scroller;
 
 
 /*--------------------------------------------------------------------------------------------*/
@@ -143,8 +144,6 @@ void SelectorRefresh(struct Selector *selector)
 
 void OpenSelector(struct Window *mainwin, struct Selector *selector)
 {
-	STRPTR title;
-
 	ScrProp.Flags = FREEVERT | PROPNEWLOOK | PROPBORDERLESS | AUTOKNOB;
 	ScrProp.HorizPot = 0;
 	ScrProp.HorizBody = MAXBODY;
@@ -453,7 +452,6 @@ static BOOL BestScore(struct HighScore *current_best, LONG seconds, LONG moves)
 void HighScoreLevelCompleted(struct Selector *selector, LONG level, LONG seconds, LONG moves)
 {
 	struct HighScore *hscore;
-	BOOL new_high = FALSE;
 
 	hscore = FindHighScoreByLevelNumber(&selector->HighScores, level);
 
