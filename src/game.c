@@ -425,7 +425,11 @@ static void PrintLevelInfo(struct App *app)
 {
 	struct RastPort *rp = app->Win->RPort;
 
-	if (app->CurrentInfoText) StrFree(app->CurrentInfoText);
+	if (app->CurrentInfoText)
+	{
+		StrFree(app->CurrentInfoText);
+		app->CurrentInfoText = NULL;
+	}
 
 	if (app->Level)
 	{
