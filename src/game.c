@@ -454,26 +454,31 @@ void StopTimer(struct App *app)
 		AbortIO(&app->TimerReq->tr_node);
 		WaitIO(&app->TimerReq->tr_node);
 	}
+
+	app->TimerStopped = TRUE;
 }
 
 /*---------------------------------------------------------------------------*/
 
 void PushNextSecond(struct App *app, BOOL redraw)
 {
-	if (redraw) PrintLevelTime(app);
-	app->LevelTime.Sec++;
-
-	if (app->LevelTime.Sec == 60)
+	if (!app->TimerStopped)
 	{
-		app->LevelTime.Sec = 0;
-		app->LevelTime.Min++;
-	}
+		if (redraw) PrintLevelTime(app);
+		app->LevelTime.Sec++;
 
-	app->NextSecond.tv_secs++;
-	app->TimerReq->tr_node.io_Command = TR_ADDREQUEST;
-	app->TimerReq->tr_time = app->NextSecond;
-	app->TimerUsed = TRUE;
-	SendIO(&app->TimerReq->tr_node);
+		if (app->LevelTime.Sec == 60)
+		{
+			app->LevelTime.Sec = 0;
+			app->LevelTime.Min++;
+		}
+
+		app->NextSecond.tv_secs++;
+		app->TimerReq->tr_node.io_Command = TR_ADDREQUEST;
+		app->TimerReq->tr_time = app->NextSecond;
+		app->TimerUsed = TRUE;
+		SendIO(&app->TimerReq->tr_node);
+	}
 }
 
 /*---------------------------------------------------------------------------*/
@@ -484,6 +489,7 @@ static void StartTimer(struct App *app)
 	app->LevelTime.Min = 0;
 	GetSysTime(&app->LevelStart);
 	app->NextSecond = app->LevelStart;
+	app->TimerStopped = FALSE;
 	PushNextSecond(app, TRUE);
 }
 
@@ -494,8 +500,6 @@ void NewGame(struct App *app)
 	BPTR olddir = NULL;
 	BOOL endgame = FALSE;
 
-	app->LevelTime.Min = 0;
-	app->LevelTime.Sec = 0;
 	if (app->LevelSetFile.wa_Lock) olddir = CurrentDir(app->LevelSetFile.wa_Lock);
 
 	if (app->Level = LoadLevel(app->Win, app->LevelNumber, app->LevelSetFile.wa_Name, &endgame))
