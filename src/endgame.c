@@ -10,6 +10,8 @@
 #include <proto/graphics.h>
 #include <proto/dos.h>
 #include <proto/layers.h>
+#include <proto/timer.h>
+#include <proto/intuition.h>
 #include <graphics/rpattr.h>
 
 #define SEGMENT_UP     0
@@ -22,6 +24,8 @@ struct EndGameText
 	char *text;
 	LONG len;
 };
+
+unsigned long long FractTime, FractDelta = 1;
 
 //---------------------------------------------------------------------------------------------
 
@@ -39,10 +43,25 @@ static void deltaDraw(struct RastPort *rp, Point *p, short dx, short dy)
 
 	p->x += ddx;
 	p->y += ddy;
-	if (/*ReadPixel(rp, p->x, p->y)*/ 0 == 0)	WritePixel(rp, p->x, p->y);
+	WritePixel(rp, p->x, p->y);
 	p->x += ddx;
 	p->y += ddy;
-	if (/*ReadPixel(rp, p->x, p->y)*/ 0 == 0)	WritePixel(rp, p->x, p->y);
+	WritePixel(rp, p->x, p->y);
+}
+
+//---------------------------------------------------------------------------------------------
+
+void TimerDelay()
+{
+	unsigned long long t;
+
+	do
+	{
+		ReadEClock((struct EClockVal*)&t);
+	}
+	while (t < FractTime);
+
+	FractTime += FractDelta;
 }
 
 //---------------------------------------------------------------------------------------------
@@ -58,6 +77,8 @@ void Segment(struct RastPort *rp, short direction, short size, Point *p)
 			case SEGMENT_DOWN:   deltaDraw(rp, p, 0, 2);   break;
 			case SEGMENT_RIGHT:  deltaDraw(rp, p, 2, 0);   break;
 		}
+
+		TimerDelay();
 	}
 	else
 	{
@@ -103,6 +124,17 @@ void Fractal(struct App *app)
 
 //---------------------------------------------------------------------------------------------
 
+void TimedFractal(struct App *app)
+{
+	ULONG efreq;
+
+	efreq = ReadEClock((struct EClockVal*)&FractTime);
+	FractDelta = efreq >> 10;
+	Fractal(app);
+}
+
+//---------------------------------------------------------------------------------------------
+
 void ClipFractal(struct App *app)
 {
 	struct Window *win = app->Win;
@@ -122,7 +154,7 @@ void ClipFractal(struct App *app)
 
 			if (org != rg)
 			{
-				Fractal(app);
+				TimedFractal(app);
 				InstallClipRegion(win->WLayer, org);
 			}
 		}
@@ -216,12 +248,22 @@ void FreeTexts(struct EndGameText *texts)
 void EndGame(struct App *app)
 {
 	struct EndGameText texts[4];
+	struct Requester req;
 
-	if (PrepareTexts(app, texts))
+	InitRequester(&req);
+
+	if (Request(&req, app->Win))
 	{
-		PrintTextsCentered(app, texts);
-		ClipFractal(app);
-	}
+		SetWindowPointer(app->Win, WA_BusyPointer, TRUE, TAG_END);
 
-	FreeTexts(texts);
+		if (PrepareTexts(app, texts))
+		{
+			ClipFractal(app);
+			PrintTextsCentered(app, texts);
+		}
+
+		FreeTexts(texts);
+		EndRequest(&req, app->Win);
+		SetWindowPointer(app->Win, WA_Pointer, NULL, TAG_END);
+	}
 }
