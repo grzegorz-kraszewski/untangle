@@ -2,7 +2,7 @@ Short:        Untangle set of dots joined by lines
 Uploader:     grzegorz.kraszewski@gmail.com (Grzegorz Kraszewski)
 Author:       grzegorz.kraszewski@gmail.com (Grzegorz Kraszewski)
 Type:         game/wb
-Version:      1.0
+Version:      1.1
 Architecture: m68k-amigaos >= 3.0
 
 Each level of Untangle consists of a set of dots connected by lines. The goal

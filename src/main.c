@@ -85,8 +85,9 @@ void TheLoop(struct App *app)
 
 	portmask = 1 << app->Win->UserPort->mp_SigBit;
 	timermask = 1 << app->TimerPort->mp_SigBit;
+	app->TimerStopped = TRUE;
 
-	NewGame(app);  /* later it should load last played level from save */
+	NewGame(app);
 
 	while (running)
 	{
@@ -392,8 +393,8 @@ static LONG GetTimer(struct App *app)
 
 	if (app->TimerPort = CreateMsgPort())
 	{
-		if (app->TimerReq = (struct timerequest*)CreateIORequest(app->TimerPort,
-		sizeof(struct timerequest)))
+		if (app->TimerReq = (struct TimeRequest*)CreateIORequest(app->TimerPort,
+		sizeof(struct TimeRequest)))
 		{
 			if (OpenDevice("timer.device", UNIT_WAITUNTIL, &app->TimerReq->tr_node, 0) == 0)
 			{

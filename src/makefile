@@ -1,10 +1,11 @@
 CC = gcc
 LD = gcc
-CFLAGS = -W -Wall -Wno-parentheses -nostdlib -O2 -fbaserel -msmall-code -fomit-frame-pointer -mregparm \
- -D__NOLIBBASE__ -DUSE_INLINE_STDARG
+CFLAGS = -W -Wall -Wno-parentheses -nostdlib -O2 -fbaserel -msmall-code -fomit-frame-pointer \
+ -mregparm -D__NOLIBBASE__
 LDFLAGS = -s -fbaserel -nostartfiles -nostdlib
 LIBS = 
-OBJS = start.o main.o menu.o game.o loader.o lscm.o savelevel.o strutils.o selector.o savestate.o loadstate.o
+OBJS = start.o main.o menu.o game.o loader.o lscm.o savelevel.o strutils.o selector.o \
+ savestate.o loadstate.o endgame.o
 EXE = Untangle
 
 all: $(OBJS)

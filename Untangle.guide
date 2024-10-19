@@ -1,12 +1,12 @@
 @DATABASE Untangle.guide
-@$VER: Untangle.guide 1.0 (03.09.2024)
+@$VER: Untangle.guide 1.1 (19.10.2024)
 @AUTHOR: RastPort
 @WIDTH 80
 @SMARTWRAP
 @NODE Main "Untangle"
 
 
-@{JCENTER}@{B}Untangle 1.0@{UB}
+@{JCENTER}@{B}Untangle 1.1@{UB}
 
 @{JLEFT}
 
@@ -78,8 +78,8 @@ Level is solved, when there are no intersections. Then the game blinks the
 screen, pauses for a second, and loads the next level.
 
 
-After the last level of a set is completed, a requester with text "no more
-levels in set" is displayed.
+After the last level of a set is completed, the game ending is displayed with
+some statistics.
 
 
 A level is accessible after all the previous levels of set have been solved.

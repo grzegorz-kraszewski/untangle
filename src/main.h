@@ -1,6 +1,8 @@
 #ifndef UNTANGLE_MAIN_H
 #define UNTANGLE_MAIN_H
 
+#define __USE_NEW_TIMEVAL__
+
 #include <exec/types.h>
 #include <exec/lists.h>
 #include <graphics/gfx.h>
@@ -132,10 +134,11 @@ struct App
 	WORD DotHeight;                    /* pixels */
 	BOOL TimerUsed;
 	struct MsgPort *TimerPort;
-	struct timerequest *TimerReq;
+	struct TimeRequest *TimerReq;
+	BOOL TimerStopped;
 	struct GameTime LevelTime;
-	struct timeval LevelStart;
-	struct timeval NextSecond;
+	struct TimeVal LevelStart;
+	struct TimeVal NextSecond;
 	struct Selector Selector;
 	struct WinPosRecord MainWinPos;
 };
